@@ -16,7 +16,7 @@ local Signal = require(Shared.Util.Signal)
 
 -- Fired when something that changes the bike/spawn was bought or picked (ramp, gear, map).
 local ShopService = { LoadoutChanged = Signal.new() }
-local LOADOUT_KINDS = { ramp = true, boosters = true, exploders = true }
+local LOADOUT_KINDS = { ramp = true, boosters = true, exploders = true, charge = true }
 local TEST_MODE_ATTRIBUTE = "CanTestMode"
 
 local spending = {} -- player -> { base = cash when spending started, spent = total spent since }

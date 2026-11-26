@@ -2,7 +2,8 @@
 
 Studio can't reach localhost (so no Rojo here); instead each snippet is pasted into the
 Studio MCP's execute_luau. Changed files become exact old->new block replacements
-(small), new files are sent whole. Usage: python tools/studio_patch.py [outdir]
+(small), new files are sent whole. Usage: python tools/studio_patch.py [outdir] [base-ref]
+(base-ref = the commit Studio currently matches, HEAD by default).
 """
 import difflib
 import os
@@ -60,9 +61,12 @@ def lua_str(text):
     return "[" + eq + "[" + ("\n" if text.startswith("\n") else "") + text + "]" + eq + "]"
 
 
+BASE = sys.argv[2] if len(sys.argv) > 2 else "HEAD"
+
+
 def head_text(rel):
     try:
-        return subprocess.run(["git", "show", "HEAD:" + rel], capture_output=True, check=True).stdout.decode("utf-8").replace("\r\n", "\n")
+        return subprocess.run(["git", "show", BASE + ":" + rel], capture_output=True, check=True).stdout.decode("utf-8").replace("\r\n", "\n")
     except subprocess.CalledProcessError:
         return None
 
@@ -97,7 +101,9 @@ def edits_for(old, new):
 
 def main():
     outdir = sys.argv[1] if len(sys.argv) > 1 else "."
-    changed = subprocess.run(["git", "status", "--porcelain", "--", "src"], capture_output=True, text=True).stdout.splitlines()
+    changed = ["   " + f for f in subprocess.run(["git", "diff", "--name-only", BASE, "--", "src"], capture_output=True, text=True).stdout.splitlines()]
+    changed += subprocess.run(["git", "status", "--porcelain", "--untracked-files=all", "--", "src"], capture_output=True, text=True).stdout.splitlines()
+    changed = list(dict.fromkeys(changed))
     stmts = []
     for line in changed:
         rel = line[3:].strip().strip('"')
