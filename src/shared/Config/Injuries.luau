@@ -10,6 +10,7 @@ return {
 		Curve = { PivotMph = 500, Below = 1.25, Above = 0.6 },
 		SeverityMph = 60, -- extra mph for injury severity 1 (picks the medical injury)
 		ImpactValue = 6, -- $ per hit at severity 1
+		PayoutScale = 0.9, -- every injury $ on the payout sheet is multiplied by this
 		Exponent = 1.6, -- bigger hits pay much more
 		MphPerExtraBone = 120, -- every this many mph, one more bone in the body part takes the hit
 		DustMph = 5000, -- cumulative mph that turns a bone to dust (darkest red)
@@ -39,15 +40,18 @@ return {
 	-- A hit is a "record" when its speed change beats your best ever (and is at least MinRecordMph),
 	-- "near record" when it is within NearRecord of it AND you spent SpendShare of your cash
 	-- since your last payout. minMph = the hit's raw speed change needed for that modifier.
-	-- flash = Config/Flashes entry shown on screen.
+	-- flash = Config/Flashes entry shown on screen; names = what the hit is called (one picked at random).
 	Lucky = {
 		MinRecordMph = 60,
 		NearRecord = 0.85,
 		SpendShare = 0.75,
 		list = {
-			{ id = "x10", nameKey = "LUCKY_X10", mult = 10, recordChance = 0.025, nearChance = 0.0625, minMph = 1500, flash = "Lucky10" },
-			{ id = "x4", nameKey = "LUCKY_X4", mult = 4, recordChance = 0.05, nearChance = 0.125, minMph = 0, flash = "Lucky4" },
-			{ id = "x2", nameKey = "LUCKY_X2", mult = 2, recordChance = 0.10, nearChance = 0.25, minMph = 0, flash = "Lucky2" },
+			{ id = "x10", mult = 10, recordChance = 0.025, nearChance = 0.0625, minMph = 1500, flash = "Lucky10",
+				names = { "LUCKY_BRAIN", "LUCKY_HEART", "LUCKY_SPINE" } },
+			{ id = "x4", mult = 4, recordChance = 0.05, nearChance = 0.125, minMph = 0, flash = "Lucky4",
+				names = { "LUCKY_SKULL", "LUCKY_CONCUSSION", "LUCKY_LUNG", "LUCKY_RIBCAGE" } },
+			{ id = "x2", mult = 2, recordChance = 0.10, nearChance = 0.25, minMph = 0, flash = "Lucky2",
+				names = { "LUCKY_SPLEEN", "LUCKY_KIDNEY", "LUCKY_LIVER", "LUCKY_APPENDIX", "LUCKY_BLADDER" } },
 		},
 	},
 

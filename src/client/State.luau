@@ -29,7 +29,7 @@ local State = {
 	Impact = Signal.new(), -- (part, speedChange, result, kind) kind = nil (hit), "contact" or "blast"
 	Exploded = Signal.new(), -- (position, force)
 	BoostChanged = Signal.new(), -- (boosting, fuelFraction)
-	LuckyHit = Signal.new(), -- (luckyDef, extraMoney) server rolled a lucky hit
+	LuckyHit = Signal.new(), -- (luckyDef, nameKey, extraMoney) server rolled a lucky hit
 	Payout = Signal.new(), -- (sheet)
 	CashedOut = Signal.new(), -- (total)
 	Notify = Signal.new(), -- (textKey, ...)

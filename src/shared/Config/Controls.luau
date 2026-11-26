@@ -3,7 +3,7 @@
 -- touch = show an on-screen button on phones.
 return {
 	actions = {
-		{ name = "Hop", keys = { Enum.KeyCode.Space, Enum.KeyCode.ButtonA }, touch = true, nameKey = "ACT_HOP_BAIL" },
+		{ name = "Bail", keys = { Enum.KeyCode.Space, Enum.KeyCode.ButtonA }, touch = true, nameKey = "ACT_BAIL" },
 		{ name = "Boost", keys = { Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonR2 }, touch = true, nameKey = "ACT_BOOST" },
 		{ name = "Explode", keys = { Enum.KeyCode.X, Enum.KeyCode.ButtonY }, touch = true, nameKey = "ACT_EXPLODE" },
 		{ name = "Tailwhip", keys = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL1 }, touch = true, nameKey = "ACT_TAILWHIP" },

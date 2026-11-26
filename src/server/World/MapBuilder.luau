@@ -22,18 +22,21 @@ local CHUNK = 2000 -- force field built in chunks of this length (z)
 local FENCE_INSET = 10
 local MAX_FENCE_POSTS = 400
 
-local PROP_BUILDERS = { -- config key -> builder, upright (true) or follows the slope (false)
-	trees = { Props.tree, true },
-	rocks = { Props.rock, true },
-	lamps = { Props.lamp, true },
-	benches = { Props.bench, false },
-	hay = { Props.hay, false },
-	tables = { Props.picnicTable, false },
-	bouncers = { Props.bouncer, false },
-	fences = { Props.fence, false },
-	crates = { Props.crate, false },
-	cars = { Props.car, false },
-	rails = { Props.grindRail, false },
+-- config key -> builder; upright = stands straight up (else follows the slope);
+-- facing = keep pointing downhill (else turned at random)
+local PROP_BUILDERS = {
+	trees = { build = Props.tree, upright = true },
+	rocks = { build = Props.rock, upright = true },
+	lamps = { build = Props.lamp, upright = true },
+	benches = { build = Props.bench },
+	hay = { build = Props.hay },
+	tables = { build = Props.picnicTable },
+	bouncers = { build = Props.bouncer },
+	fences = { build = Props.fence },
+	crates = { build = Props.crate },
+	cars = { build = Props.car },
+	rails = { build = Props.grindRail },
+	launchRamps = { build = Props.launchRamp, facing = true },
 }
 
 -- Fills the space under a straight line from (zA, yA) down to (zB, yB) with wedges on top and
@@ -194,6 +197,47 @@ local function buildFences(def, g, model)
 	fenceLine(g.landEnd + endZ + Vector3.new(-half, 0, 0), g.landEnd + endZ + Vector3.new(half, 0, 0), Vector3.yAxis)
 end
 
+-- A surface stripe running down the slope and across the park (visual only, sits on the ground).
+local function stripe(g, folder, name, x, width, color)
+	local function piece(from, to, normal)
+		local length = (to - from).Magnitude
+		local frame = CFrame.fromMatrix((from + to) / 2, normal:Cross((to - from).Unit).Unit, normal)
+		for _, part in Build.tiled({ Name = name, Size = Vector3.new(width, 0.2, length), CFrame = frame * CFrame.new(0, 0.12, 0), Color = color, Parent = folder }) do
+			part.CanCollide, part.CanQuery, part.CanTouch = false, false, false
+		end
+	end
+	local offset = Vector3.new(x, 0, 0)
+	piece(g.landStart + offset, g.landEnd + offset, g.landNormal)
+	piece(g.landEnd + offset, g.landEnd + offset + Vector3.new(0, 0, PARK_LENGTH), Vector3.yAxis)
+end
+
+-- Streets: road down the middle with dashed centre line, pavements either side, houses outside.
+local function buildStreet(def, g, model, rng)
+	local street = def.street
+	local folder = Build.model("Street", model)
+	stripe(g, folder, "Road", 0, street.road, P.Asphalt)
+	for _, side in { -1, 1 } do
+		stripe(g, folder, "Pavement", side * (street.road + street.pavement) / 2, street.pavement, P.Concrete)
+		stripe(g, folder, "Kerb", side * street.road / 2, 2, P.White)
+	end
+	local dashes = math.min(Maps.PropCap * 2, math.floor(def.landing.length / (street.laneDash * 2)))
+	for i = 0, dashes - 1 do
+		local at = g.landStart + g.landDown * ((i + 0.5) * street.laneDash * 2)
+		local dash = Build.decor({ Name = "LaneDash", Size = Vector3.new(1.2, 0.2, street.laneDash), CFrame = Build.onSurface(at, g.landNormal) * CFrame.new(0, 0.25, 0), Color = P.White, Parent = folder })
+		dash.CanTouch = false
+	end
+	local houses = math.min(Maps.PropCap, math.floor(def.landing.length / street.houseSpacing))
+	for i = 0, houses - 1 do
+		for _, side in { -1, 1 } do
+			local along = (i + 0.5) * street.houseSpacing + rng:NextNumber(-10, 10)
+			local position = g.landStart + g.landDown * along + Vector3.new(side * street.houseX, 0, 0)
+			local house = Props.house(rng)
+			house:PivotTo(CFrame.new(position) * CFrame.Angles(0, if side > 0 then math.pi else 0, 0)) -- front door faces the road
+			house.Parent = folder
+		end
+	end
+end
+
 local function placeProps(def, g, model)
 	local rng = Random.new(def.seed)
 	local folder = Build.model("Props", model)
@@ -201,16 +245,21 @@ local function placeProps(def, g, model)
 	local perThousand = def.landing.length / 1000
 	for key, density in def.props do
 		local builder = PROP_BUILDERS[key]
+		local area = def.propAreas and def.propAreas[key]
 		for _ = 1, math.min(Maps.PropCap, math.floor(density * perThousand)) do
 			local along = rng:NextNumber(80, def.landing.length + PARK_LENGTH - 40)
 			local onSlope = along <= def.landing.length
 			local position = if onSlope
 				then g.landStart + g.landDown * along
 				else g.landEnd + Vector3.new(0, 0, along - def.landing.length)
-			position += Vector3.new(rng:NextNumber(-half, half), 0, 0)
-			local normal = if onSlope and not builder[2] then g.landNormal else Vector3.yAxis
-			local prop = builder[1](rng, def.theme)
-			prop:PivotTo(Build.onSurface(position, normal) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
+			local x = if area
+				then rng:NextNumber(area[1], math.min(area[2], half)) * (if rng:NextNumber() < 0.5 then -1 else 1)
+				else rng:NextNumber(-half, half)
+			position += Vector3.new(x, 0, 0)
+			local normal = if onSlope and not builder.upright then g.landNormal else Vector3.yAxis
+			local turn = if builder.facing then 0 else rng:NextNumber(0, math.pi * 2)
+			local prop = builder.build(rng, def.theme)
+			prop:PivotTo(Build.onSurface(position, normal) * CFrame.Angles(0, turn, 0))
 			prop.Parent = folder
 		end
 	end
@@ -236,6 +285,9 @@ function MapBuilder.build(def, parent)
 	buildGround(def, g, model, floorY)
 	buildBarrier(def, g, model)
 	buildFences(def, g, model)
+	if def.street then
+		buildStreet(def, g, model, Random.new(def.seed + 1))
+	end
 	placeProps(def, g, model)
 	model.Parent = parent
 	return model

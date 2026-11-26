@@ -10,7 +10,7 @@ local State = require(script.Parent.Parent.State)
 local Input = require(script.Parent.Input)
 local BikeController = require(script.Parent.BikeController)
 local RagdollController = require(script.Parent.RagdollController)
-local DamageDetector = require(script.Parent.DamageDetector)
+local Blast = require(script.Parent.Blast)
 
 local GearController = {}
 
@@ -69,13 +69,7 @@ local function explode()
 	Net.event("BombUsed"):FireServer()
 	local travel = part.AssemblyLinearVelocity
 	local direction = (Vector3.yAxis * EXPLODE_UP + (if travel.Magnitude > 1 then travel.Unit else Vector3.zero)).Unit
-	State.Exploded:Fire(part.Position, force)
-	if State.phase == "Ragdoll" then
-		Ragdoll.addVelocity(RagdollController.character(), direction * force)
-		DamageDetector.reset()
-	else
-		RagdollController.bail("explode", direction * force)
-	end
+	Blast.launch(part.Position, force, direction)
 end
 
 -- Bombs left this run (0 when no exploder is equipped).

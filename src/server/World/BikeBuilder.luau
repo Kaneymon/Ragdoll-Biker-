@@ -3,6 +3,7 @@
 --   Chassis (invisible physics root)
 --     Motor6D "Whip"  -> FrameRoot (frame, fork, wheels, gear)   tailwhip spins this
 --       Motor6D "FrontSpin"/"RearSpin" -> wheels                 wheel roll
+--       Motor6D "Crank" -> CrankRoot (sprocket, crank arms, pedals) pedalling
 --     Motor6D "Bars"  -> BarsRoot (handlebars)                   barspin spins this
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
@@ -26,6 +27,8 @@ local POINTS = {
 	boosterStrut = Vector3.new(0, 0.45, 1.3), -- where the booster's support bar meets the frame
 }
 local FRAME_COLOR, ACCENT = P.Coral, P.Sun
+local GRIP_OFFSET = Vector3.new(0, 0.7, 0.1) -- from the bars pivot to the bar (see barsParts)
+local GRIP_SPREAD = 1.0 -- grip centre distance from the middle of the bar
 local SLIPPERY = PhysicalProperties.new(1, 0, 0, 100, 100)
 
 local function visual(props, parent)
@@ -94,9 +97,20 @@ local function frameParts(model)
 		add(tube(p.headBottom + offset * 0.4, p.front + offset, 0.13, ACCENT, model)) -- fork
 	end
 	add(visual({ Name = "Seat", Size = Vector3.new(0.7, 0.3, 1.5), CFrame = CFrame.new(p.seat + Vector3.new(0, 0.3, 0.1)), Color = P.Ink }, model))
-	add(visual({ Name = "Sprocket", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.15, 1.1, 1.1), CFrame = CFrame.new(p.crank + Vector3.new(0.3, 0, 0)), Color = ACCENT }, model))
+	return parts
+end
+
+-- Sprocket, crank arms and pedals: one assembly that spins round the crank axle.
+local function crankParts(model)
+	local p = POINTS
+	local parts = {
+		visual({ Name = "Sprocket", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.15, 1.1, 1.1), CFrame = CFrame.new(p.crank + Vector3.new(0.3, 0, 0)), Color = ACCENT }, model),
+		visual({ Name = "Axle", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.9, 0.25, 0.25), CFrame = CFrame.new(p.crank), Color = P.Metal }, model),
+	}
 	for _, side in { -1, 1 } do
-		add(visual({ Name = "Pedal", Size = Vector3.new(0.7, 0.2, 0.5), CFrame = CFrame.new(p.crank + Vector3.new(side * 0.65, side * 0.45, 0)), Color = P.Ink }, model))
+		local pedalAt = p.crank + Vector3.new(side * 0.65, side * 0.45, 0)
+		table.insert(parts, tube(p.crank + Vector3.new(side * 0.42, 0, 0), pedalAt - Vector3.new(side * 0.2, 0, 0), 0.07, P.Metal, model)) -- crank arm
+		table.insert(parts, visual({ Name = "Pedal", Size = Vector3.new(0.7, 0.2, 0.5), CFrame = CFrame.new(pedalAt), Color = P.Ink }, model))
 	end
 	return parts
 end
@@ -133,9 +147,18 @@ function BikeBuilder.build(gear)
 	motor("Whip", chassis, frameRoot, POINTS.headTop)
 	motor("FrontSpin", frameRoot, wheel("FrontWheel", POINTS.front, model), POINTS.front)
 	motor("RearSpin", frameRoot, wheel("RearWheel", POINTS.rear, model), POINTS.rear)
+	local crankRoot = pivotPart("CrankRoot", POINTS.crank, model)
+	weldAll(crankRoot, crankParts(model))
+	motor("Crank", frameRoot, crankRoot, POINTS.crank)
 
 	local barsRoot = pivotPart("BarsRoot", POINTS.barsPivot, model)
 	weldAll(barsRoot, barsParts(model))
+	for side, x in { Left = -1, Right = 1 } do -- where the rider's hands hold the bars
+		local grip = Instance.new("Attachment")
+		grip.Name = side .. "Grip"
+		grip.Position = barsRoot.CFrame:PointToObjectSpace(POINTS.barsPivot + GRIP_OFFSET + Vector3.new(x * GRIP_SPREAD, 0, 0))
+		grip.Parent = barsRoot
+	end
 	motor("Bars", chassis, barsRoot, POINTS.barsPivot)
 
 	local align = Instance.new("Attachment")

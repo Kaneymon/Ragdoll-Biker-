@@ -10,7 +10,7 @@ local UI = Client.UI
 
 Localize.init()
 
-for _, name in { "Input", "BikeController", "TrickController", "RagdollController", "DamageDetector", "GearController", "CameraController" } do
+for _, name in { "Input", "BikeController", "TrickController", "RagdollController", "DamageDetector", "GearController", "HazardController", "CameraController" } do
 	require(Controllers[name]).start()
 end
 require(Client.Feedback.Feedback).start()

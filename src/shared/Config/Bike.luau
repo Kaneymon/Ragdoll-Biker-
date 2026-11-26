@@ -16,6 +16,8 @@ return {
 	SideslipAngle = 70, -- degrees between bike and travel direction = crash
 	LeaveGroundGrace = 0.25,
 	LaunchPopPerSpeed = 0.22, -- extra launch speed off a kicker per stud/s of entry speed
+	PedalGearRatio = 2.2, -- wheel turns per pedal turn (pedals only spin while pedalling)
+	PedalMaxSpin = 14, -- radians/sec cap so pedals stay readable at high speed
 	AutoBailIdle = 3, -- seconds stopped on the bike before auto-bail
 	-- Ragdoll steering: Accel pushes you camera-relative, Spin tumbles you (both x control).
 	-- In the air, control = Helmet airControl, rising to full (1) as speed nears FullSpeed while

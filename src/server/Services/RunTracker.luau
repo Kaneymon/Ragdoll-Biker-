@@ -126,8 +126,8 @@ local function rollLucky(player, run, speed, result)
 	local lucky = InjuryModel.rollLucky(rawMph, stats.recordImpact, run.spentEnough, luckRng)
 	stats.recordImpact = math.max(stats.recordImpact, math.floor(rawMph))
 	if lucky then
-		local extra = InjuryModel.applyLucky(run.report, lucky, result.money)
-		Net.event("LuckyHit"):FireClient(player, lucky.id, extra)
+		local extra, nameKey = InjuryModel.applyLucky(run.report, lucky, result.money, luckRng)
+		Net.event("LuckyHit"):FireClient(player, lucky.id, nameKey, InjuryModel.money(extra))
 	end
 end
 

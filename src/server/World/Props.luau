@@ -1,6 +1,10 @@
--- Cartoon park props built from simple shapes. Each returns a Model pivoted at its base.
+-- Cartoon map props built from simple shapes (the car is the Blender toy car mesh, kept in
+-- ServerStorage.Assets.ToyCar). Each returns a Model pivoted at its base.
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 local P = require(ReplicatedStorage.Shared.Config.Palette)
+local Hazards = require(ReplicatedStorage.Shared.Config.Hazards)
 local Build = require(script.Parent.Build)
 
 local Props = {}
@@ -88,16 +92,59 @@ function Props.crate(rng: Random)
 	return finish(model)
 end
 
+local CAR_PAINTS = { P.Coral, P.Sky, P.Sun, P.Grape, P.Grass, P.Orange }
+local CAR_PART_COLORS = { -- mesh part name -> colour ("paint" = the car's random paint)
+	Body = "paint", Cabin = "paint",
+	WindowFront = P.Sky, WindowBack = P.Sky, WindowSide = P.Sky,
+	Tyre = P.Rubber, Rim = P.White, BumperFront = P.Ink, BumperBack = P.Ink,
+	Headlight = P.Sun, Taillight = P.Danger,
+}
+
+-- A toy car that blows up when touched (Config/Hazards "Car"): it never blocks anything.
 function Props.car(rng: Random)
-	local model = Build.model("Car")
-	local colors = { P.Coral, P.Sky, P.Sun, P.Grape, P.Grass }
-	local color = colors[rng:NextInteger(1, #colors)]
-	Build.part({ Name = "Body", Size = Vector3.new(7, 3, 14), CFrame = CFrame.new(0, 2.5, 0), Color = color, Parent = model })
-	Build.part({ Name = "Cabin", Size = Vector3.new(6, 2.6, 7), CFrame = CFrame.new(0, 5.2, -0.5), Color = P.White, Parent = model })
-	for _, x in { -3.4, 3.4 } do
-		for _, z in { -4.5, 4.5 } do
-			Build.part({ Name = "Wheel", Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.2, 3, 3), CFrame = CFrame.new(x, 1.5, z), Color = P.Rubber, Parent = model })
-		end
+	local model = ServerStorage.Assets.ToyCar:Clone()
+	model.Name = "Car"
+	local paint = CAR_PAINTS[rng:NextInteger(1, #CAR_PAINTS)]
+	for _, part in model:GetChildren() do
+		local color = CAR_PART_COLORS[part.Name]
+		part.Color = if color == "paint" then paint else color or P.Metal
+		part.CanCollide, part.CanQuery, part.CanTouch = false, false, false
+	end
+	model:SetAttribute("Hazard", "Car")
+	CollectionService:AddTag(model, Hazards.Tag)
+	return model
+end
+
+-- A little house for the edge of the street: walls, a pointy roof, door and windows.
+local HOUSE_WALLS = { P.Paper, P.Shade, P.Card, P.Sun, P.Sky }
+local HOUSE_ROOFS = { P.Coral, P.Grape, P.WoodDark, P.SkyDark }
+function Props.house(rng: Random)
+	local model = Build.model("House")
+	local width, depth, height = rng:NextNumber(24, 34), rng:NextNumber(22, 30), rng:NextNumber(14, 22)
+	local wall = HOUSE_WALLS[rng:NextInteger(1, #HOUSE_WALLS)]
+	local roof = HOUSE_ROOFS[rng:NextInteger(1, #HOUSE_ROOFS)]
+	Build.part({ Name = "Base", Size = Vector3.new(width + 2, 20, depth + 2), CFrame = CFrame.new(0, -9, 0), Color = P.Stone, Parent = model })
+	Build.part({ Name = "Walls", Size = Vector3.new(width, height, depth), CFrame = CFrame.new(0, height / 2, 0), Color = wall, Parent = model })
+	local roofHeight = width * 0.35
+	for _, side in { -1, 1 } do -- two wedges meeting at the ridge (ridge runs along z)
+		Build.part({ Name = "Roof", Size = Vector3.new(depth + 2, roofHeight, width / 2 + 1), CFrame = CFrame.new(side * (width / 4 + 0.5), height + roofHeight / 2, 0) * CFrame.Angles(0, -side * math.pi / 2, 0), Color = roof, Parent = model }, "WedgePart")
+	end
+	Build.decor({ Name = "Door", Size = Vector3.new(0.4, 7, 4), CFrame = CFrame.new(width / 2 + 0.1, 3.5, 0), Color = P.WoodDark, Parent = model })
+	for _, z in { -depth / 4, depth / 4 } do
+		Build.decor({ Name = "Window", Size = Vector3.new(0.4, 4, 4), CFrame = CFrame.new(width / 2 + 0.1, height * 0.6, z), Color = P.Sky, Parent = model })
+	end
+	return finish(model)
+end
+
+-- A small launch ramp for the landing slope: ride over it to fly (its top keeps the Launch tag
+-- the bike looks for). The high end faces downhill (+z), so it must not be turned.
+function Props.launchRamp(rng: Random, theme)
+	local model = Build.model("LaunchRamp")
+	local width, length, height = rng:NextNumber(20, 30), rng:NextNumber(16, 24), rng:NextNumber(4, 7)
+	local ramp = Build.part({ Name = "Ramp", Size = Vector3.new(width, height, length), CFrame = CFrame.new(0, height / 2, 0), Color = theme.kickerA, Parent = model }, "WedgePart")
+	ramp:SetAttribute("Launch", true)
+	for _, side in { -1, 1 } do
+		Build.decor({ Name = "Edge", Size = Vector3.new(0.8, height + 0.4, length), CFrame = CFrame.new(side * width / 2, height / 2, 0), Color = theme.kickerB, Parent = model })
 	end
 	return finish(model)
 end

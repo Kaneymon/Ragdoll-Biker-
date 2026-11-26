@@ -22,7 +22,7 @@ table.sort(worstStatusFirst, function(a, b)
 end)
 
 function InjuryModel.new()
-	return { bones = {}, injuries = {}, injuryOrder = {}, impactMoney = 0, impacts = 0, lucky = {}, luckyMoney = 0, hurt = 0 }
+	return { bones = {}, injuries = {}, injuryOrder = {}, impactMoney = 0, impacts = 0, lucky = {}, luckyMoney = 0, hurt = 0 } -- lucky = list of { id, nameKey, money }
 end
 
 function InjuryModel.injury(id)
@@ -132,12 +132,19 @@ function InjuryModel.applyImpact(report, partName, speedChange, bonesPerHit)
 	return { severity = severity, mph = mph, injury = injury, bones = hitBones, region = region, money = money }
 end
 
--- A lucky hit pays its money (impact + injury) again (mult - 1) more times.
-function InjuryModel.applyLucky(report, lucky, hitMoney)
+-- A lucky hit pays its money (impact + injury) again (mult - 1) more times and gets a random name.
+-- Returns the extra money and the name's text key.
+function InjuryModel.applyLucky(report, lucky, hitMoney, rng)
 	local extra = hitMoney * (lucky.mult - 1)
+	local nameKey = lucky.names[rng:NextInteger(1, #lucky.names)]
 	report.luckyMoney += extra
-	report.lucky[lucky.id] = (report.lucky[lucky.id] or 0) + 1
-	return extra
+	table.insert(report.lucky, { id = lucky.id, nameKey = nameKey, money = extra })
+	return extra, nameKey
+end
+
+-- Injury money as paid out (Tuning.PayoutScale).
+function InjuryModel.money(amount)
+	return math.floor(amount * T.PayoutScale)
 end
 
 function InjuryModel.luckyDef(id)
@@ -192,17 +199,15 @@ function InjuryModel.summary(report, multiplier, mapMult)
 		injuryMoney += injuryById[id].value * count
 		injuryCount += count
 	end
-	local bill = math.floor(report.impactMoney + boneMoney + injuryMoney + report.luckyMoney)
+	local bill = InjuryModel.money(report.impactMoney + boneMoney + injuryMoney + report.luckyMoney)
 	local lucky = {}
-	for _, def in Injuries.Lucky.list do
-		if report.lucky[def.id] then
-			table.insert(lucky, { id = def.id, count = report.lucky[def.id] })
-		end
+	for _, hit in report.lucky do
+		table.insert(lucky, { id = hit.id, nameKey = hit.nameKey, money = InjuryModel.money(hit.money) })
 	end
 	return {
 		bill = bill,
-		impactMoney = math.floor(report.impactMoney),
-		luckyMoney = math.floor(report.luckyMoney),
+		impactMoney = InjuryModel.money(report.impactMoney),
+		luckyMoney = InjuryModel.money(report.luckyMoney),
 		lucky = lucky,
 		total = math.floor(bill * multiplier * mapMult),
 		bonesHurt = hurt,

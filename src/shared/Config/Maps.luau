@@ -3,6 +3,9 @@
 -- origin = top of the mega ramp (downhill is +Z); all maps end near y = -250, side by side on X,
 -- SPACING apart, so every map can see (and see the riders on) its neighbours.
 -- props = how many of each prop per 1000 studs of landing slope (capped by PropCap).
+-- propAreas = where across the slope a prop may go: { from, to } studs from the centre line
+--   (either side); anything not listed can go anywhere.
+-- street = draw a road down the middle, pavements either side and houses along the outside.
 local P = require(script.Parent.Palette)
 
 local SPACING = 2000 -- studs between map centres on X (each force field box is 1620 wide)
@@ -33,7 +36,8 @@ return {
 			runout = 70, kicker = { radius = 120, endAngle = 40, segments = 12 }, gap = 70,
 			landing = { angle = 14, length = 5100, width = 420 },
 			theme = theme(P.Concrete, P.Stone, P.Sky, P.Grape, P.Sky, P.Grape),
-			props = { crates = 14, benches = 10, rocks = 12, bouncers = 6, fences = 10, rails = 10 },
+			props = { crates = 14, benches = 10, rocks = 12, bouncers = 6, fences = 10, rails = 10, launchRamps = 3 },
+			propAreas = { launchRamps = { 0, 150 } },
 		},
 		{
 			id = "streets", nameKey = "MAP_STREETS", price = 2500000, level = 20, payoutMult = 4,
@@ -42,7 +46,9 @@ return {
 			runout = 90, kicker = { radius = 160, endAngle = 40, segments = 14 }, gap = 90,
 			landing = { angle = 14, length = 15300, width = 420 },
 			theme = theme(P.Asphalt, P.Ink, P.Orange, P.Sun, P.Orange, P.Sun),
-			props = { cars = 10, lamps = 8, crates = 6, benches = 4, bouncers = 3 },
+			props = { cars = 8, lamps = 8, crates = 4, benches = 4, bouncers = 3 },
+			propAreas = { cars = { 0, 95 }, bouncers = { 0, 95 }, lamps = { 115, 145 }, crates = { 115, 145 }, benches = { 115, 145 } },
+			street = { road = 220, pavement = 40, laneDash = 30, houseX = 180, houseSpacing = 75 },
 		},
 		{
 			id = "mountain", nameKey = "MAP_MOUNTAIN", price = 25000000, level = 30, payoutMult = 8,

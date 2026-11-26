@@ -50,23 +50,20 @@ local function show(sheet)
 		order += 1
 		line(list, order, "- " .. Localize.get("PAY_HITS"), Format.money(sheet.impactMoney), P.Money)
 	end
-	if sheet.luckyMoney > 0 then -- lucky hits, best first
+	for _, hit in sheet.lucky do -- lucky hits, named after what broke
 		order += 1
-		local names = {}
-		for _, item in sheet.lucky do
-			table.insert(names, Localize.get(InjuryModel.luckyDef(item.id).nameKey) .. " " .. Localize.get("PAY_COUNT", item.count))
-		end
-		line(list, order, "- " .. Localize.get("PAY_LUCKY") .. ": " .. table.concat(names, ", "), Format.money(sheet.luckyMoney), P.Money)
+		local name = Localize.get("PAY_LUCKY_LINE", Localize.get(hit.nameKey), InjuryModel.luckyDef(hit.id).mult)
+		line(list, order, "- " .. name, Format.money(hit.money), P.Money)
 	end
 	for _, item in sheet.statuses do -- bones by how badly they're hurt, worst first
 		order += 1
 		local status = InjuryModel.status(item.id)
-		entry(order, status.nameKey, item.count, status.value * item.count)
+		entry(order, status.nameKey, item.count, InjuryModel.money(status.value * item.count))
 	end
 	for _, item in sheet.injuries do -- medical injuries
 		order += 1
 		local injury = InjuryModel.injury(item.id)
-		entry(order, injury.nameKey, item.count, injury.value * item.count)
+		entry(order, injury.nameKey, item.count, InjuryModel.money(injury.value * item.count))
 	end
 	if order == 0 then
 		line(list, 1, "- " .. Localize.get("PAY_NONE"), "")

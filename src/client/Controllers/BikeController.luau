@@ -94,8 +94,8 @@ local function stepAir(dt)
 end
 
 -- Ground step ---------------------------------------------------------------
--- popNormal = push off this way (hop or kicker). Kicker launches also grow with entry speed,
--- so faster runs fly much higher.
+-- popNormal = push off this way (ramps/kickers only; there is no hop). The launch is the Pedals
+-- jumpHeight plus a share of entry speed, so faster runs and better pedals fly higher.
 local function leaveGround(popNormal, fromKicker)
 	ride.align.Enabled = false
 	ride.grace = Bike.LeaveGroundGrace
@@ -188,16 +188,17 @@ local function spinWheels(dt)
 	if not ride then
 		return
 	end
-	ride.wheelAngle = (ride.wheelAngle + ride.speed / WHEEL_RADIUS * dt) % (math.pi * 2)
+	local wheelSpin = ride.speed / WHEEL_RADIUS
+	ride.wheelAngle = (ride.wheelAngle + wheelSpin * dt) % (math.pi * 2)
 	local roll = CFrame.Angles(-ride.wheelAngle, 0, 0)
 	ride.joints.FrontSpin.Transform = roll
 	ride.joints.RearSpin.Transform = roll
-end
-
-local function onHop(name)
-	if name == "Hop" and ride and State.phase == "Riding" then
-		leaveGround(ride.normal)
+	-- pedals turn only while pedalling on the ground (BMX freewheel)
+	if State.phase == "Riding" and Input.move().Z < -0.1 then
+		local pedalSpin = math.min(math.max(wheelSpin, 4) / Bike.PedalGearRatio, Bike.PedalMaxSpin)
+		ride.crankAngle = (ride.crankAngle + pedalSpin * dt) % (math.pi * 2)
 	end
+	ride.joints.Crank.Transform = CFrame.Angles(-ride.crankAngle, 0, 0)
 end
 
 -- Public --------------------------------------------------------------------
@@ -222,6 +223,7 @@ function BikeController.attach(bike: Model, isCurrent: () -> boolean): boolean
 			Bars = chassis:WaitForChild("Bars"),
 			FrontSpin = frameRoot:WaitForChild("FrontSpin"),
 			RearSpin = frameRoot:WaitForChild("RearSpin"),
+			Crank = frameRoot:WaitForChild("Crank"),
 		},
 		hold = chassis.CFrame,
 		heading = flat(chassis.CFrame.LookVector),
@@ -232,6 +234,7 @@ function BikeController.attach(bike: Model, isCurrent: () -> boolean): boolean
 		idle = 0,
 		blocked = 0,
 		wheelAngle = 0,
+		crankAngle = 0,
 	}
 	ride.align.CFrame = chassis.CFrame.Rotation
 	ride.align.Enabled = true
@@ -252,7 +255,6 @@ end
 function BikeController.start()
 	RunService.Heartbeat:Connect(step)
 	RunService.RenderStepped:Connect(spinWheels)
-	Input.Began:Connect(onHop)
 end
 
 return BikeController

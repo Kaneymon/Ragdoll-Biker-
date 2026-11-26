@@ -42,7 +42,7 @@ local function onCharacter(character)
 	end
 	stopAnimations(character)
 	if BikeController.attach(bike, isCurrent) then
-		RiderPose.track(character, bike.Chassis:FindFirstChild("RiderWeld"), "Ride")
+		RiderPose.track(character, bike.Chassis:FindFirstChild("RiderWeld"), "Ride", bike:FindFirstChild("BarsRoot"))
 	end
 end
 
@@ -60,10 +60,10 @@ function Session.start()
 	Net.event("Notify").OnClientEvent:Connect(function(key, ...)
 		State.Notify:Fire(key, ...)
 	end)
-	Net.event("LuckyHit").OnClientEvent:Connect(function(id, extra)
+	Net.event("LuckyHit").OnClientEvent:Connect(function(id, nameKey, extra)
 		local lucky = InjuryModel.luckyDef(id)
 		if lucky then
-			State.LuckyHit:Fire(lucky, extra)
+			State.LuckyHit:Fire(lucky, nameKey, extra)
 		end
 	end)
 	Net.event("PayoutReady").OnClientEvent:Connect(function(sheet)
