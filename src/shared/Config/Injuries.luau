@@ -13,17 +13,21 @@ return {
 		Exponent = 1.6, -- bigger hits pay much more
 		MphPerExtraBone = 120, -- every this many mph, one more bone in the body part takes the hit
 		DustMph = 5000, -- cumulative mph that turns a bone to dust (darkest red)
+		-- Bones are easy to hurt until EasyBones are hurt in a run; after that every hit's bone
+		-- damage is scaled by (EasyBones / bones hurt) ^ HardPower (141 bones -> half, 200 -> quarter).
+		EasyBones = 100,
+		HardPower = 2,
 		MaxImpacts = 80,
 		Cooldown = 0.12, -- seconds between hits on the same body part
 	},
 
 	-- What a bone is called once its cumulative speed damage (mph) reaches minMph.
 	BoneStatuses = {
-		{ id = "contusion", nameKey = "BONE_ST_CONTUSION", minMph = 60, value = 1 },
-		{ id = "fracture", nameKey = "BONE_ST_FRACTURE", minMph = 300, value = 3 },
-		{ id = "break", nameKey = "BONE_ST_BREAK", minMph = 800, value = 6 },
-		{ id = "multi_break", nameKey = "BONE_ST_MULTI", minMph = 1600, value = 10 },
-		{ id = "shattered", nameKey = "BONE_ST_SHATTERED", minMph = 3000, value = 18 },
+		{ id = "contusion", nameKey = "BONE_ST_CONTUSION", minMph = 30, value = 1 },
+		{ id = "fracture", nameKey = "BONE_ST_FRACTURE", minMph = 120, value = 3 },
+		{ id = "break", nameKey = "BONE_ST_BREAK", minMph = 300, value = 6 },
+		{ id = "multi_break", nameKey = "BONE_ST_MULTI", minMph = 700, value = 10 },
+		{ id = "shattered", nameKey = "BONE_ST_SHATTERED", minMph = 1800, value = 18 },
 		{ id = "dust", nameKey = "BONE_ST_DUST", minMph = 5000, value = 30 },
 	},
 

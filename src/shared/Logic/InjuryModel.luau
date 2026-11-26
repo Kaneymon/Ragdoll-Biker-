@@ -22,7 +22,7 @@ table.sort(worstStatusFirst, function(a, b)
 end)
 
 function InjuryModel.new()
-	return { bones = {}, injuries = {}, injuryOrder = {}, impactMoney = 0, impacts = 0, lucky = {}, luckyMoney = 0 }
+	return { bones = {}, injuries = {}, injuryOrder = {}, impactMoney = 0, impacts = 0, lucky = {}, luckyMoney = 0, hurt = 0 }
 end
 
 function InjuryModel.injury(id)
@@ -56,6 +56,14 @@ function InjuryModel.boneStatus(mph)
 		end
 	end
 	return nil
+end
+
+-- Bone damage multiplier: 1 until EasyBones are hurt this run, then it falls off.
+function InjuryModel.boneScale(hurt)
+	if hurt < T.EasyBones then
+		return 1
+	end
+	return (T.EasyBones / hurt) ^ T.HardPower
 end
 
 -- 0..1 darkness of a bone for the skeleton picture.
@@ -103,8 +111,14 @@ function InjuryModel.applyImpact(report, partName, speedChange, bonesPerHit)
 
 	local count = math.max(1, math.floor((1 + mph / T.MphPerExtraBone) * (bonesPerHit or 1)))
 	local hitBones = pickBones(partName, count, report.impacts * 7919 + #partName * 104729)
+	local boneMph = mph * InjuryModel.boneScale(report.hurt)
 	for _, bone in hitBones do
-		report.bones[bone] = math.min(T.DustMph, (report.bones[bone] or 0) + mph)
+		local before = report.bones[bone] or 0
+		local after = math.min(T.DustMph, before + boneMph)
+		report.bones[bone] = after
+		if not InjuryModel.boneStatus(before) and InjuryModel.boneStatus(after) then
+			report.hurt += 1
+		end
 	end
 
 	local injury = pickInjury(region, severity)
