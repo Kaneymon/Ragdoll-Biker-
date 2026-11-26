@@ -1,0 +1,196 @@
+-- One run per life: Riding -> Ragdoll -> Payout -> cash out (respawn).
+-- The server re-scores tricks and impacts itself; the client only reports what happened.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local Bike = require(Shared.Config.Bike)
+local Economy = require(Shared.Config.Economy)
+local Injuries = require(Shared.Config.Injuries)
+local Tricks = require(Shared.Config.Tricks)
+local InjuryModel = require(Shared.Logic.InjuryModel)
+local TrickScore = require(Shared.Logic.TrickScore)
+local Progression = require(Shared.Logic.Progression)
+local Ragdoll = require(Shared.Logic.Ragdoll)
+local Net = require(Shared.Net)
+local DataService = require(script.Parent.DataService)
+local BikeService = require(script.Parent.BikeService)
+local ShopService = require(script.Parent.ShopService)
+
+local RunTracker = {}
+
+local MAX_IMPACTS_PER_BATCH = 40
+local SERVER_REST_TIMEOUT = Bike.Rest.MaxTime + 10
+local runs = {} -- player -> run
+
+local function corePosition(player)
+	local core = player.Character and Ragdoll.core(player.Character)
+	return core and core.Position
+end
+
+local function newRun(player)
+	runs[player] = {
+		phase = "Riding",
+		report = InjuryModel.new(),
+		tricks = {},
+		maxSpeed = 0,
+		startPos = corePosition(player),
+	}
+end
+
+local function validTricks(list)
+	local tricks = {}
+	if type(list) ~= "table" then
+		return tricks
+	end
+	for i, id in list do
+		if i > Tricks.MaxTricksPerRun then
+			break
+		end
+		if type(id) == "string" and TrickScore.def(id) then
+			table.insert(tricks, id)
+		end
+	end
+	return tricks
+end
+
+local function buildSheet(player, run)
+	local profile = DataService.get(player)
+	local stats = Progression.bikeStats(profile)
+	local map = Progression.map(profile.maps.selected)
+	local multiplier = TrickScore.multiplier(run.tricks, stats.trickBonus)
+	local summary = InjuryModel.summary(run.report, multiplier, map.payoutMult)
+	local finalPos = corePosition(player) or run.bailPos
+	local injuries = {}
+	for _, id in run.report.injuryOrder do
+		table.insert(injuries, { id = id, count = run.report.injuries[id] })
+	end
+	return {
+		bones = run.report.bones,
+		injuries = injuries,
+		bill = summary.bill,
+		multiplier = multiplier,
+		mapMult = map.payoutMult,
+		total = math.min(summary.total, Economy.MaxPayoutPerRun),
+		broken = summary.broken,
+		injuryCount = summary.injuryCount,
+		tricks = #run.tricks,
+		maxSpeed = run.maxSpeed,
+		distance = if finalPos and run.bailPos then (finalPos - run.bailPos).Magnitude else 0,
+		fall = if finalPos and run.startPos then math.max(0, run.startPos.Y - finalPos.Y) else 0,
+	}
+end
+
+local function finish(player)
+	local run = runs[player]
+	if not run or run.phase ~= "Ragdoll" then
+		return
+	end
+	run.phase = "Payout"
+	run.sheet = buildSheet(player, run)
+	Net.event("PayoutReady"):FireClient(player, run.sheet)
+end
+
+local function onBail(player, trickIds, maxSpeed)
+	local run = runs[player]
+	if not run or run.phase ~= "Riding" then
+		return
+	end
+	run.phase = "Ragdoll"
+	run.tricks = validTricks(trickIds)
+	run.maxSpeed = if type(maxSpeed) == "number" then math.clamp(maxSpeed, 0, Bike.MaxSpeed * 2) else 0
+	run.bailPos = corePosition(player)
+	BikeService.detach(player)
+	task.delay(SERVER_REST_TIMEOUT, function()
+		if runs[player] == run then
+			finish(player)
+		end
+	end)
+end
+
+local function onImpacts(player, batch)
+	local run = runs[player]
+	if not run or run.phase ~= "Ragdoll" or type(batch) ~= "table" then
+		return
+	end
+	for i, impact in batch do
+		if i > MAX_IMPACTS_PER_BATCH then
+			break
+		end
+		if type(impact) == "table" and type(impact.part) == "string" and type(impact.speed) == "number" and impact.speed == impact.speed then
+			InjuryModel.applyImpact(run.report, impact.part, math.clamp(impact.speed, 0, Injuries.Tuning.MaxImpactSpeed))
+		end
+	end
+end
+
+local function recordStats(profile, sheet)
+	local s = profile.stats
+	s.totalRuns += 1
+	s.totalDistance += math.floor(sheet.distance)
+	s.totalBones += sheet.broken
+	s.totalEarned += sheet.total
+	s.highestSpeed = math.max(s.highestSpeed, math.floor(sheet.maxSpeed))
+	s.furthestFall = math.max(s.furthestFall, math.floor(sheet.fall))
+	s.recordBones = math.max(s.recordBones, sheet.broken)
+	s.recordInjuries = math.max(s.recordInjuries, sheet.injuryCount)
+	s.totalMultiplier += sheet.multiplier - 1
+	s.bestMultiplier = math.max(s.bestMultiplier, sheet.multiplier)
+	s.totalTricks += sheet.tricks
+	s.bestTricks = math.max(s.bestTricks, sheet.tricks)
+end
+
+local function onCashOut(player)
+	local run = runs[player]
+	if not run or run.phase ~= "Payout" then
+		return false
+	end
+	run.phase = "Done"
+	local sheet = run.sheet
+	local levelBefore, levelAfter
+	DataService.update(player, function(profile)
+		levelBefore = Progression.level(profile.totalEarned)
+		profile.money += sheet.total
+		profile.totalEarned += sheet.total
+		levelAfter = Progression.level(profile.totalEarned)
+		recordStats(profile, sheet)
+	end)
+	if levelAfter and levelAfter > levelBefore then
+		Net.event("Notify"):FireClient(player, "NOTE_LEVEL_UP", levelAfter)
+	end
+	task.defer(player.LoadCharacter, player)
+	return true, sheet.total
+end
+
+function RunTracker.start()
+	Players.PlayerAdded:Connect(function(player)
+		player.CharacterAdded:Connect(function()
+			newRun(player)
+		end)
+	end)
+	for _, player in Players:GetPlayers() do
+		player.CharacterAdded:Connect(function()
+			newRun(player)
+		end)
+		if player.Character then
+			newRun(player)
+		end
+	end
+	Players.PlayerRemoving:Connect(function(player)
+		runs[player] = nil
+	end)
+
+	-- New ramp height or gear: respawn on a fresh bike (menus are only open before a ride starts).
+	ShopService.LoadoutChanged:Connect(function(player)
+		local run = runs[player]
+		if run and run.phase == "Riding" then
+			player:LoadCharacter()
+		end
+	end)
+
+	Net.event("Bail").OnServerEvent:Connect(onBail)
+	Net.event("Impacts").OnServerEvent:Connect(onImpacts)
+	Net.event("RunFinished").OnServerEvent:Connect(finish)
+	Net.func("CashOut").OnServerInvoke = onCashOut
+end
+
+return RunTracker
