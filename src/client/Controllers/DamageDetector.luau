@@ -1,5 +1,8 @@
--- Player damage detector: watches every ragdoll body part for sudden speed changes against the world.
--- Each hit is scored locally (live HUD) and sent to the server in small batches (real payout).
+-- Player damage detector. Three ways the ragdoll gets hurt:
+--  * hits: a body part's speed changes suddenly against the world,
+--  * contact: sliding/rolling along a surface hurts a share of your speed (Injuries.Contact),
+--  * blasts: an exploder hurts as much as the speed it gives you.
+-- Each hurt is scored locally (live HUD) and sent to the server in small batches (real payout).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -13,6 +16,7 @@ local State = require(script.Parent.Parent.State)
 local DamageDetector = {}
 
 local T = Injuries.Tuning
+local C = Injuries.Contact
 local SEND_INTERVAL = 0.25
 local CONTACT_REACH = 2.5
 local IGNORE_AFTER_RESET = 0.3
@@ -23,7 +27,9 @@ local lastVelocity = {}
 local lastHit = {}
 local pending = {}
 local sendTimer = 0
+local contactTimer = 0
 local ignoreUntil = 0
+local pendingBlast = nil -- blast force waiting for the ragdoll to start
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Include
 
@@ -33,10 +39,20 @@ function DamageDetector.reset()
 	ignoreUntil = os.clock() + IGNORE_AFTER_RESET
 end
 
--- Only count a speed change if there is world geometry on the side the part was pushed away from.
-local function touchingWorld(part, change)
-	local reach = part.Size.Magnitude / 2 + CONTACT_REACH
-	return workspace:Raycast(part.Position, -change.Unit * reach, rayParams) ~= nil
+-- Scores one hurt and queues it for the server. kind = nil (hit), "contact" or "blast".
+local function hurt(part, speed, kind)
+	local result = InjuryModel.applyImpact(State.run.report, part.Name, speed, State.stats.bonesPerHit)
+	if result then
+		table.insert(pending, { part = part.Name, speed = speed, kind = kind })
+		State.Impact:Fire(part, speed, result, kind)
+	end
+end
+
+-- Is there world geometry within reach of the part in this direction? At high speed a part can
+-- bounce several studs away within the same frame it hit, so the reach grows with its speed.
+local function worldWithin(part, direction, travel)
+	local reach = part.Size.Magnitude / 2 + CONTACT_REACH + travel
+	return workspace:Raycast(part.Position, direction * reach, rayParams) ~= nil
 end
 
 local function flush()
@@ -47,7 +63,7 @@ local function flush()
 	sendTimer = 0
 end
 
-local function check(part, gravityStep, now)
+local function checkHit(part, gravityStep, now, dt)
 	local velocity = part.AssemblyLinearVelocity
 	local previous = lastVelocity[part]
 	lastVelocity[part] = velocity
@@ -56,14 +72,28 @@ local function check(part, gravityStep, now)
 	end
 	local change = velocity - (previous + gravityStep)
 	local amount = change.Magnitude
-	if amount < MIN_SPEED_CHANGE or now < ignoreUntil or now - (lastHit[part] or 0) < T.Cooldown or not touchingWorld(part, change) then
+	if amount < MIN_SPEED_CHANGE or now < ignoreUntil or now - (lastHit[part] or 0) < T.Cooldown then
+		return
+	end
+	local travel = math.max(previous.Magnitude, velocity.Magnitude) * dt
+	if not worldWithin(part, -change.Unit, travel) then
 		return
 	end
 	lastHit[part] = now
-	local result = InjuryModel.applyImpact(State.run.report, part.Name, amount, State.stats.bonesPerHit)
-	if result then
-		table.insert(pending, { part = part.Name, speed = amount })
-		State.Impact:Fire(part, amount, result)
+	hurt(part, amount)
+end
+
+-- Sliding: the fastest body part touching the ground takes a share of its speed as damage.
+local function checkContact()
+	local best, bestSpeed = nil, C.MinSpeed
+	for _, part in parts do
+		local speed = part.AssemblyLinearVelocity.Magnitude
+		if speed > bestSpeed and worldWithin(part, -Vector3.yAxis, 0) then
+			best, bestSpeed = part, speed
+		end
+	end
+	if best then
+		hurt(best, bestSpeed * C.Share, "contact")
 	end
 end
 
@@ -74,11 +104,25 @@ local function step(dt)
 	local gravityStep = Vector3.new(0, -workspace.Gravity * dt, 0)
 	local now = os.clock()
 	for _, part in parts do
-		check(part, gravityStep, now)
+		checkHit(part, gravityStep, now, dt)
+	end
+	contactTimer += dt
+	if contactTimer >= C.Interval then
+		contactTimer = 0
+		checkContact()
 	end
 	sendTimer += dt
 	if sendTimer >= SEND_INTERVAL then
 		flush()
+	end
+end
+
+-- An exploder hurts the body as much as the speed it adds (on the bike it waits for the bail).
+local function onExploded(_position, force)
+	if State.phase == "Ragdoll" and State.character then
+		hurt(Ragdoll.core(State.character), force, "blast")
+	else
+		pendingBlast = force
 	end
 end
 
@@ -87,15 +131,21 @@ local function onPhase(phase, previous)
 		parts = Ragdoll.parts(State.character)
 		rayParams.FilterDescendantsInstances = { workspace:WaitForChild("World") }
 		table.clear(lastHit)
+		contactTimer = 0
 		DamageDetector.reset()
+		if pendingBlast then
+			hurt(Ragdoll.core(State.character), pendingBlast, "blast")
+		end
 	elseif previous == "Ragdoll" then
 		flush()
 	end
+	pendingBlast = nil
 end
 
 function DamageDetector.start()
 	RunService.Heartbeat:Connect(step)
 	State.PhaseChanged:Connect(onPhase)
+	State.Exploded:Connect(onExploded)
 	State.Bailed:Connect(function(reason)
 		if reason == "crash" then
 			ignoreUntil = 0 -- a crash IS the hit, so count it straight away

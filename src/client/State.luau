@@ -26,7 +26,7 @@ local State = {
 	Trick = Signal.new(), -- (def, bonus, multiplier)
 	RequestBail = Signal.new(), -- (reason, extraVelocity?)
 	Bailed = Signal.new(), -- (reason)
-	Impact = Signal.new(), -- (part, speedChange, result)
+	Impact = Signal.new(), -- (part, speedChange, result, kind) kind = nil (hit), "contact" or "blast"
 	Exploded = Signal.new(), -- (position, force)
 	BoostChanged = Signal.new(), -- (boosting, fuelFraction)
 	LuckyHit = Signal.new(), -- (luckyDef, extraMoney) server rolled a lucky hit

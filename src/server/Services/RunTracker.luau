@@ -143,7 +143,7 @@ local function onImpacts(player, batch)
 		if type(impact) == "table" and type(impact.part) == "string" and type(impact.speed) == "number" and impact.speed == impact.speed then
 			local speed = math.clamp(impact.speed, 0, Bike.MaxSpeed * 4)
 			local result = InjuryModel.applyImpact(run.report, impact.part, speed, run.bonesPerHit)
-			if result then
+			if result and impact.kind == nil then -- only real hits set records and roll lucky hits
 				rollLucky(player, run, speed, result)
 			end
 		end

@@ -22,11 +22,16 @@ local function injuryFx()
 	return State.profile == nil or State.profile.settings.injuryFx
 end
 
-local function onImpact(part, _speed, result)
+local function onImpact(part, _speed, result, kind)
 	if not injuryFx() then
 		return
 	end
 	local severity = result.severity
+	if kind == "contact" then -- sliding: a soft scrape, no crunch or shake
+		Sfx.play("Thud", part)
+		Vfx.burst("Impact", part.Position, 0.5)
+		return
+	end
 	Sfx.play(if severity >= 1 then "BoneCrack" elseif severity >= 0.5 then "Squelch" else "Thud", part)
 	if severity >= 0.5 and math.random() < GROAN_CHANCE then
 		Sfx.play("Groan", part)

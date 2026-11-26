@@ -17,9 +17,13 @@ return {
 		-- damage is scaled by (EasyBones / bones hurt) ^ HardPower (141 bones -> half, 200 -> quarter).
 		EasyBones = 100,
 		HardPower = 2,
-		MaxImpacts = 80,
+		MaxImpacts = 400, -- hurts counted per run (hits + sliding + blasts)
 		Cooldown = 0.12, -- seconds between hits on the same body part
 	},
+
+	-- Sliding/rolling along the ground: every Interval seconds the fastest body part touching the
+	-- ground is hurt as if hit at Share of its speed (only above MinSpeed studs/s).
+	Contact = { Interval = 0.3, Share = 0.15, MinSpeed = 60 },
 
 	-- What a bone is called once its cumulative speed damage (mph) reaches minMph.
 	BoneStatuses = {
