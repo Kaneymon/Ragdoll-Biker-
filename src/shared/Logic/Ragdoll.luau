@@ -8,7 +8,7 @@ local Joints = require(script.Parent.Joints)
 local Ragdoll = {}
 
 local SURFACE = Bike.RagdollPhysics
-local BODY_PHYSICS = PhysicalProperties.new(SURFACE.Density, SURFACE.Friction, SURFACE.Elasticity, SURFACE.FrictionWeight, SURFACE.ElasticityWeight)
+local MIN_FRICTION = 0.03
 local LIMITS = { -- Motor6D rigs only: { cone angle, twist } in degrees
 	Neck = { 35, 40 },
 	Waist = { 25, 30 },
@@ -76,12 +76,19 @@ local function goLimp(character)
 	end
 end
 
-function Ragdoll.enable(character)
+-- Body surface from upgrade stats: Kneepads (slide) cut friction, Body Armour (bounce) adds bounce.
+function Ragdoll.surface(stats)
+	local friction = math.max(MIN_FRICTION, SURFACE.Friction * (1 - (stats.slide or 0)))
+	local elasticity = math.min(1, SURFACE.Elasticity + (stats.bounce or 0))
+	return PhysicalProperties.new(SURFACE.Density, friction, elasticity, SURFACE.FrictionWeight, SURFACE.ElasticityWeight)
+end
+
+function Ragdoll.enable(character, surface: PhysicalProperties)
 	goLimp(character)
 	for _, part in Ragdoll.parts(character) do
 		part.CanCollide = true
 		part.Massless = false
-		part.CustomPhysicalProperties = BODY_PHYSICS
+		part.CustomPhysicalProperties = surface
 	end
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if root then

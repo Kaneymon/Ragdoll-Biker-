@@ -37,8 +37,8 @@ local function onCharacter(character)
 		return
 	end
 	stopAnimations(character)
-	RiderPose.apply(character, "Ride")
 	BikeController.attach(bike)
+	RiderPose.track(character, bike.Chassis:FindFirstChild("RiderWeld"), "Ride")
 end
 
 -- Ask the server to pay out; returns success.

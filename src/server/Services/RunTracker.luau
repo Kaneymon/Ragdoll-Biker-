@@ -6,7 +6,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Bike = require(Shared.Config.Bike)
 local Economy = require(Shared.Config.Economy)
-local Injuries = require(Shared.Config.Injuries)
 local Tricks = require(Shared.Config.Tricks)
 local InjuryModel = require(Shared.Logic.InjuryModel)
 local TrickScore = require(Shared.Logic.TrickScore)
@@ -56,7 +55,7 @@ end
 
 local function buildSheet(player, run)
 	local profile = DataService.get(player)
-	local stats = Progression.bikeStats(profile)
+	local stats = Progression.stats(profile)
 	local map = Progression.map(profile.maps.selected)
 	local multiplier = TrickScore.multiplier(run.tricks, stats.trickBonus)
 	local summary = InjuryModel.summary(run.report, multiplier, map.payoutMult)
@@ -72,7 +71,8 @@ local function buildSheet(player, run)
 		multiplier = multiplier,
 		mapMult = map.payoutMult,
 		total = math.min(summary.total, Economy.MaxPayoutPerRun),
-		broken = summary.broken,
+		bonesHurt = summary.bonesHurt,
+		statuses = summary.statuses,
 		injuryCount = summary.injuryCount,
 		tricks = #run.tricks,
 		maxSpeed = run.maxSpeed,
@@ -100,6 +100,7 @@ local function onBail(player, trickIds, maxSpeed)
 	run.tricks = validTricks(trickIds)
 	run.maxSpeed = if type(maxSpeed) == "number" then math.clamp(maxSpeed, 0, Bike.MaxSpeed * 2) else 0
 	run.bailPos = corePosition(player)
+	run.bonesPerHit = Progression.stats(DataService.get(player)).bonesPerHit
 	BikeService.detach(player)
 	task.delay(SERVER_REST_TIMEOUT, function()
 		if runs[player] == run then
@@ -118,7 +119,7 @@ local function onImpacts(player, batch)
 			break
 		end
 		if type(impact) == "table" and type(impact.part) == "string" and type(impact.speed) == "number" and impact.speed == impact.speed then
-			InjuryModel.applyImpact(run.report, impact.part, math.clamp(impact.speed, 0, Injuries.Tuning.MaxImpactSpeed))
+			InjuryModel.applyImpact(run.report, impact.part, math.max(impact.speed, 0), run.bonesPerHit)
 		end
 	end
 end
@@ -127,11 +128,11 @@ local function recordStats(profile, sheet)
 	local s = profile.stats
 	s.totalRuns += 1
 	s.totalDistance += math.floor(sheet.distance)
-	s.totalBones += sheet.broken
+	s.totalBones += sheet.bonesHurt
 	s.totalEarned += sheet.total
 	s.highestSpeed = math.max(s.highestSpeed, math.floor(sheet.maxSpeed))
 	s.furthestFall = math.max(s.furthestFall, math.floor(sheet.fall))
-	s.recordBones = math.max(s.recordBones, sheet.broken)
+	s.recordBones = math.max(s.recordBones, sheet.bonesHurt)
 	s.recordInjuries = math.max(s.recordInjuries, sheet.injuryCount)
 	s.totalMultiplier += sheet.multiplier - 1
 	s.bestMultiplier = math.max(s.bestMultiplier, sheet.multiplier)

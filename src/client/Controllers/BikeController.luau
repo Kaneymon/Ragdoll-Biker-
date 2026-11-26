@@ -174,8 +174,9 @@ local function step(dt)
 	end
 	local stepFn = STEPS[State.phase]
 	if stepFn then
+		local chassis = ride.chassis -- a crash inside the step can release the ride
 		stepFn(dt)
-		State.run.maxSpeed = math.max(State.run.maxSpeed, ride.chassis.AssemblyLinearVelocity.Magnitude)
+		State.run.maxSpeed = math.max(State.run.maxSpeed, chassis.AssemblyLinearVelocity.Magnitude)
 	end
 end
 

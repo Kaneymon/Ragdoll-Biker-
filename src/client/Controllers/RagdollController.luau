@@ -46,7 +46,7 @@ function RagdollController.bail(reason: string, extraVelocity: Vector3?)
 		weld:Destroy()
 	end
 	RiderPose.release(character)
-	Ragdoll.enable(character)
+	Ragdoll.enable(character, Ragdoll.surface(State.stats))
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		humanoid:ChangeState(Enum.HumanoidStateType.Physics)
@@ -70,16 +70,24 @@ local function finish()
 	Net.event("RunFinished"):FireServer()
 end
 
+-- Camera-relative steering: WASD pushes the body and makes it tumble/flail in that direction
+-- (W/S flips forwards/backwards, A/D cartwheels). Strength scales with the Helmet upgrade.
 local function glide(dt)
 	local move = Input.move()
 	if move.Magnitude < 0.1 then
 		return
 	end
 	local camera = workspace.CurrentCamera.CFrame
-	local direction = flat(camera.LookVector) * -move.Z + flat(camera.RightVector) * move.X
+	local look, right = flat(camera.LookVector), flat(camera.RightVector)
+	local control = State.stats.glideControl
+	local direction = look * -move.Z + right * move.X
 	if direction.Magnitude > 0 then
-		Ragdoll.addVelocity(active.character, direction.Unit * Bike.Glide.Accel * dt)
+		Ragdoll.addVelocity(active.character, direction.Unit * Bike.Glide.Accel * control * dt)
 	end
+	local spinAxis = right * move.Z + look * -move.X
+	local spin = active.core.AssemblyAngularVelocity + spinAxis * Bike.Glide.Spin * control * dt
+	local maxSpin = Bike.Glide.MaxSpin * control
+	active.core.AssemblyAngularVelocity = if spin.Magnitude > maxSpin then spin.Unit * maxSpin else spin
 end
 
 local function step(dt)

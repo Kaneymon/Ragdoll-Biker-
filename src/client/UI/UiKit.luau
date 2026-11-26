@@ -75,7 +75,7 @@ function UiKit.screen(name: string, order: number?)
 	local gui = Instance.new("ScreenGui")
 	gui.Name = name
 	gui.ResetOnSpawn = false
-	gui.IgnoreGuiInset = true
+	gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets -- never under Roblox's own buttons
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.DisplayOrder = order or 0
 	UiKit.autoScale(gui)

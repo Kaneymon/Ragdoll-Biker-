@@ -18,7 +18,7 @@ local EXPLODE_UP = 0.75
 
 local fuel = 0
 local boosting = false
-local exploded = false
+local bombsLeft = 0
 
 local function corePart()
 	local character = RagdollController.character()
@@ -28,7 +28,7 @@ end
 local function refill()
 	local stats = State.profile and Progression.equippedBooster(State.profile)
 	fuel = stats and stats.fuel or 0
-	exploded = false
+	bombsLeft = if State.profile then select(3, Progression.equippedExploder(State.profile)) else 0
 	State.BoostChanged:Fire(false, if stats then 1 else 0)
 end
 
@@ -61,10 +61,10 @@ end
 local function explode()
 	local force = State.profile and Progression.equippedExploder(State.profile)
 	local part = corePart()
-	if not force or exploded or not part or not BOOST_PHASES[State.phase] then
+	if not force or bombsLeft <= 0 or not part or not BOOST_PHASES[State.phase] then
 		return
 	end
-	exploded = true
+	bombsLeft -= 1
 	local travel = part.AssemblyLinearVelocity
 	local direction = (Vector3.yAxis * EXPLODE_UP + (if travel.Magnitude > 1 then travel.Unit else Vector3.zero)).Unit
 	State.Exploded:Fire(part.Position, force)
@@ -76,8 +76,9 @@ local function explode()
 	end
 end
 
-function GearController.exploderReady()
-	return not exploded and State.profile ~= nil and Progression.equippedExploder(State.profile) ~= nil
+-- Bombs left this run (0 when no exploder is equipped).
+function GearController.bombsLeft()
+	return bombsLeft
 end
 
 function GearController.start()

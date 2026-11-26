@@ -5,6 +5,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local P = require(Shared.Config.Palette)
 local Theme = require(Shared.Config.Theme)
 local Economy = require(Shared.Config.Economy)
+local Bones = require(Shared.Config.Bones)
 local InjuryModel = require(Shared.Logic.InjuryModel)
 local Format = require(Shared.Util.Format)
 local State = require(script.Parent.Parent.State)
@@ -29,15 +30,18 @@ end
 local function show(sheet)
 	UiKit.clear(list)
 	setBones(sheet.bones)
-	UiKit.setText(bonesLabel, "PAY_BONES", sheet.broken)
+	UiKit.setText(bonesLabel, "PAY_BONES", sheet.bonesHurt, #Bones.list)
 	local order = 0
-	if #sheet.injuries == 0 then
+	if #sheet.statuses == 0 and #sheet.injuries == 0 then
 		row(order, "PAY_NONE", nil, "")
 	end
-	for _, entry in sheet.injuries do
+	for _, entry in sheet.statuses do -- bones by status, worst first
 		order += 1
-		local injury = InjuryModel.injury(entry.id)
-		row(order, injury.nameKey, nil, "x" .. entry.count)
+		row(order, InjuryModel.status(entry.id).nameKey, nil, "x" .. entry.count, P.Shade)
+	end
+	for _, entry in sheet.injuries do -- medical injuries
+		order += 1
+		row(order, InjuryModel.injury(entry.id).nameKey, nil, "x" .. entry.count)
 	end
 	row(order + 1, "PAY_BILL", nil, Format.money(sheet.bill), P.Panel)
 	row(order + 2, "PAY_TRICKS", nil, "x" .. Format.mult(sheet.multiplier), P.Panel)
@@ -69,7 +73,7 @@ function PayoutSheet.create()
 
 	local figure
 	figure, setBones = Skeleton.new(root, { Size = UDim2.new(0.34, 0, 1, -280), Position = UDim2.new(0.04, 0, 0, 90) })
-	bonesLabel = UiKit.label({ key = "PAY_BONES", args = { 0 }, style = "Body", Size = UDim2.new(0.36, 0, 0, 32), Position = UDim2.new(0.02, 0, 1, -182), Parent = root })
+	bonesLabel = UiKit.label({ key = "PAY_BONES", args = { 0, 206 }, style = "Body", Size = UDim2.new(0.36, 0, 0, 32), Position = UDim2.new(0.02, 0, 1, -182), Parent = root })
 
 	list = UiKit.scrollList({ Size = UDim2.new(0.58, 0, 1, -280), Position = UDim2.new(0.4, 0, 0, 90), Parent = root })
 	list:FindFirstChildOfClass("UIListLayout").Padding = UDim.new(0, 6)

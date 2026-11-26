@@ -1,11 +1,10 @@
--- UPGRADES: maps, ramp, bike parts, boosters, exploders. Prices from Logic/Progression.
+-- UPGRADES: maps, ramp, bike parts, biker gear, boosters, exploders. Prices from Logic/Progression.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local P = require(Shared.Config.Palette)
 local Maps = require(Shared.Config.Maps)
 local Ramp = require(Shared.Config.Ramp)
-local BikeUpgrades = require(Shared.Config.BikeUpgrades)
 local Progression = require(Shared.Logic.Progression)
 local Format = require(Shared.Util.Format)
 local Net = require(Shared.Net)
@@ -19,6 +18,7 @@ local TABS = {
 	{ id = "maps", key = "TAB_MAPS" },
 	{ id = "ramp", key = "TAB_RAMP" },
 	{ id = "bike", key = "TAB_BIKE" },
+	{ id = "biker", key = "TAB_BIKER" },
 	{ id = "boosters", key = "TAB_BOOSTERS" },
 	{ id = "exploders", key = "TAB_EXPLODERS" },
 }
@@ -37,16 +37,19 @@ local function statText(def, value)
 		return "x" .. Format.mult(value)
 	elseif def.format == "plus" then
 		return "+" .. Format.mult(value)
+	elseif def.format == "percent" then
+		return math.floor(value * 100 + 0.5) .. "%"
 	end
 	return Format.number(value)
 end
 
 -- Price button: shows MAX at the top level, greys out when unaffordable.
-local function moneyButton(cost, onClick)
+-- key = label with the price as {1} (plain price by default).
+local function moneyButton(cost, onClick, key)
 	if not cost then
 		return { "BTN_MAX", color = P.Disabled, disabled = true }
 	end
-	return { "HUD_MONEY", { Format.money(cost) }, color = P.Money, onClick = onClick, disabled = State.profile.money < cost }
+	return { key or "HUD_MONEY", { Format.money(cost) }, color = P.Money, onClick = onClick, disabled = State.profile.money < cost }
 end
 
 local renderers = {}
@@ -91,24 +94,29 @@ function renderers.ramp(window)
 	})
 end
 
-function renderers.bike(window)
-	for i, def in BikeUpgrades do
-		local level = State.profile.bike[def.id] or 0
-		local nextLevel = math.min(level + 1, def.maxLevel)
-		Card.new(window.body, {
-			title = { def.nameKey },
-			lines = {
-				{ def.descKey },
-				{ "UPG_LEVEL", { level, def.maxLevel } },
-				{ "UPG_STAT", { statText(def, Progression.bikeStatValue(def, level)), statText(def, Progression.bikeStatValue(def, nextLevel)) } },
-			},
-			buttons = { moneyButton(Progression.bikeUpgradeCost(def, level), function()
-				buy("bike", def.id)
-			end) },
-			order = i,
-		})
+-- Bike parts and biker gear: one card per upgrade with its stat now and next.
+local function renderUpgrades(set)
+	return function(window)
+		for i, def in Progression.upgradeSet(set).list do
+			local level = State.profile[set][def.id] or 0
+			local nextLevel = math.min(level + 1, def.maxLevel)
+			Card.new(window.body, {
+				title = { def.nameKey },
+				lines = {
+					{ def.descKey },
+					{ "UPG_LEVEL", { level, def.maxLevel } },
+					{ "UPG_STAT", { statText(def, Progression.statValue(set, def, level)), statText(def, Progression.statValue(set, def, nextLevel)) } },
+				},
+				buttons = { moneyButton(Progression.upgradeCost(def, level), function()
+					buy(set, def.id)
+				end) },
+				order = i,
+			})
+		end
 	end
 end
+renderers.bike = renderUpgrades("bike")
+renderers.biker = renderUpgrades("biker")
 
 local function gearLines(kind, def, level)
 	local shown = level or 0
@@ -128,9 +136,16 @@ local function renderGear(kind)
 			local lines = gearLines(kind, def, level)
 			local buttons = { moneyButton(Progression.gearCost(kind, def, level), function()
 				buy(kind, def.id)
-			end) }
+			end, if level == nil then "BTN_BUY" else "BTN_UPGRADE") }
 			if level ~= nil then
 				table.insert(lines, { "UPG_LEVEL", { level, gear.maxLevel } })
+				if kind == "exploders" then
+					local charges = Progression.charges(State.profile, def.id)
+					table.insert(lines, { "EXP_CHARGES", { charges, gear.maxCharges } })
+					table.insert(buttons, moneyButton(Progression.chargeCost(def, charges), function()
+						buy("charge", def.id)
+					end, "BTN_EXTRA_BOMB"))
+				end
 				local using = slot.equipped == def.id
 				table.insert(buttons, { if using then "BTN_EQUIPPED" else "BTN_EQUIP", color = if using then P.Grape else P.Sky, onClick = function()
 					equip(kind, def.id)

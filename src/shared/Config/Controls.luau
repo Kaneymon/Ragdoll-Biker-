@@ -10,6 +10,7 @@ return {
 		{ name = "Barspin", keys = { Enum.KeyCode.E, Enum.KeyCode.ButtonR1 }, touch = true, nameKey = "ACT_BARSPIN" },
 		{ name = "PoseSuperman", keys = { Enum.KeyCode.R, Enum.KeyCode.ButtonX }, touch = true, nameKey = "ACT_SUPERMAN" },
 		{ name = "PoseLazyboy", keys = { Enum.KeyCode.F, Enum.KeyCode.ButtonB }, touch = true, nameKey = "ACT_LAZYBOY" },
+		{ name = "PoseCanCan", keys = { Enum.KeyCode.G, Enum.KeyCode.DPadUp }, touch = true, nameKey = "ACT_CANCAN" },
 	},
 	-- Shown in Settings > Controls. pc/console/touch are display labels.
 	stick = {

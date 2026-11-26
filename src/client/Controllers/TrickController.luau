@@ -1,7 +1,8 @@
 -- Detects tricks while in the air:
---  rotation tricks (flips) from how far the bike has actually turned,
---  move tricks (tailwhip, barspin) and pose tricks (superman, lazy boy) from button presses.
--- A trick only counts once it is finished; landing or bailing mid-trick loses it.
+--  * rotation tricks (flips) from how far the bike has actually turned,
+--  * move tricks (tailwhip, barspin) from a button press, counted when the spin finishes,
+--  * grabs (superman, lazy boy, can-can) held with a button, counted every tick while held.
+-- Landing or bailing mid-move or mid-grab loses that move. Also picks the rider's pose.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -17,7 +18,7 @@ local BikeController = require(script.Parent.BikeController)
 local TrickController = {}
 
 local FULL_TURN = math.pi * 2
-local POSE_BLEND = 0.25 -- fraction of the trick spent moving into/out of the pose
+local SPIN_INPUT = 0.1
 
 local byAction = {}
 local rotationTricks = {}
@@ -31,12 +32,12 @@ end
 
 local turned = { pitch = 0, roll = 0 }
 local lastCFrame = nil
-local active = nil -- { def, t }
+local active = nil -- { def, t } for the move or grab in progress
 
 local function award(def)
 	local run = State.run
 	table.insert(run.tricks, def.id)
-	local bonus = TrickScore.bonus(def.id, State.stats.trickBonus)
+	local bonus = TrickScore.award(run.combo, def.id, State.stats.trickBonus)
 	run.multiplier = TrickScore.multiplier(run.tricks, State.stats.trickBonus)
 	Players.LocalPlayer:SetAttribute("RunTricks", #run.tricks)
 	State.Trick:Fire(def, bonus, run.multiplier)
@@ -76,64 +77,67 @@ local function trackRotation()
 	end
 end
 
--- Visuals for the move/pose in progress (alpha 0..1).
-local function poseWeight(alpha)
-	return math.clamp(math.min(alpha, 1 - alpha) / POSE_BLEND, 0, 1)
-end
-
-local function render(def, alpha)
-	if def.kind == "move" then
-		local joint = BikeController.joint(def.joint)
-		if joint then
-			joint.Transform = CFrame.Angles(0, alpha * FULL_TURN, 0)
-		end
-	elseif def.kind == "pose" then
-		local chassis = BikeController.chassis()
-		local weld = chassis and chassis:FindFirstChild("RiderWeld")
-		if weld then
-			weld.C0 = RiderPose.seat("Ride"):Lerp(RiderPose.seat(def.pose), poseWeight(alpha))
-		end
+local function spinJoint(def, alpha)
+	local joint = BikeController.joint(def.joint)
+	if joint then
+		joint.Transform = CFrame.Angles(0, alpha * FULL_TURN, 0)
 	end
 end
 
 local function stopActive()
-	if not active then
-		return
-	end
-	render(active.def, 0)
-	if active.def.kind == "pose" and State.character then
-		RiderPose.apply(State.character, "Ride")
+	if active and active.def.kind == "move" then
+		spinJoint(active.def, 0)
 	end
 	active = nil
 	State.run.trickBusy = false
 end
 
-local function startMove(def)
+local function start(def)
 	active = { def = def, t = 0 }
 	State.run.trickBusy = true
-	if def.kind == "pose" and State.character then
-		RiderPose.apply(State.character, def.pose)
-	end
 end
 
 local function stepActive(dt)
 	if not active then
 		return
 	end
-	active.t += dt * State.stats.trickSpeed / active.def.duration
-	if active.t >= 1 then
-		local def = active.def
-		stopActive()
-		award(def)
-	else
-		render(active.def, active.t)
+	local def = active.def
+	if def.kind == "move" then
+		active.t += dt * State.stats.trickSpeed / def.duration
+		if active.t >= 1 then
+			stopActive()
+			award(def)
+		else
+			spinJoint(def, active.t)
+		end
+	elseif def.kind == "grab" then
+		active.t += dt * State.stats.trickSpeed
+		while active.t >= Tricks.GrabTick do
+			active.t -= Tricks.GrabTick
+			award(def)
+		end
 	end
+end
+
+-- Rider pose: the trick in progress, a tuck while flipping, otherwise riding.
+local function currentPose()
+	if active and active.def.pose then
+		return active.def.pose
+	end
+	local move = Input.move()
+	if State.phase == "Air" and (math.abs(move.Z) > SPIN_INPUT or math.abs(move.X) > SPIN_INPUT) then
+		return Tricks.SpinPose
+	end
+	return "Ride"
 end
 
 local function step(dt)
 	if State.phase == "Air" then
 		trackRotation()
 		stepActive(dt)
+	end
+	if State.character and State.isRiding() then
+		RiderPose.blend(State.character, currentPose())
 	end
 end
 
@@ -148,17 +152,24 @@ local function onPhase(phase)
 	end
 end
 
-local function onAction(name)
+local function onActionBegan(name)
 	local def = byAction[name]
 	if def and State.phase == "Air" and not active then
-		startMove(def)
+		start(def)
+	end
+end
+
+local function onActionEnded(name)
+	if active and active.def.kind == "grab" and active.def.action == name then
+		stopActive()
 	end
 end
 
 function TrickController.start()
 	RunService.Heartbeat:Connect(step)
 	State.PhaseChanged:Connect(onPhase)
-	Input.Began:Connect(onAction)
+	Input.Began:Connect(onActionBegan)
+	Input.Ended:Connect(onActionEnded)
 end
 
 return TrickController

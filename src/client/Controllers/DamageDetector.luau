@@ -16,6 +16,7 @@ local T = Injuries.Tuning
 local SEND_INTERVAL = 0.25
 local CONTACT_REACH = 2.5
 local IGNORE_AFTER_RESET = 0.3
+local MIN_SPEED_CHANGE = T.MinHitMph / T.StudsToMph -- studs/s
 
 local parts = {}
 local lastVelocity = {}
@@ -55,11 +56,11 @@ local function check(part, gravityStep, now)
 	end
 	local change = velocity - (previous + gravityStep)
 	local amount = change.Magnitude
-	if amount < T.MinImpact or now < ignoreUntil or now - (lastHit[part] or 0) < T.Cooldown or not touchingWorld(part, change) then
+	if amount < MIN_SPEED_CHANGE or now < ignoreUntil or now - (lastHit[part] or 0) < T.Cooldown or not touchingWorld(part, change) then
 		return
 	end
 	lastHit[part] = now
-	local result = InjuryModel.applyImpact(State.run.report, part.Name, amount)
+	local result = InjuryModel.applyImpact(State.run.report, part.Name, amount, State.stats.bonesPerHit)
 	if result then
 		table.insert(pending, { part = part.Name, speed = amount })
 		State.Impact:Fire(part, amount, result)

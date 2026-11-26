@@ -12,6 +12,7 @@ return {
 	White = Color3.fromRGB(255, 255, 255),
 	Panel = Color3.fromRGB(245, 248, 255),
 	Card = Color3.fromRGB(225, 235, 252),
+	Shade = Color3.fromRGB(255, 225, 225),
 	Disabled = Color3.fromRGB(170, 175, 190),
 	Money = Color3.fromRGB(70, 195, 85),
 	Danger = Color3.fromRGB(235, 70, 70),

@@ -1,5 +1,8 @@
 -- In-run HUD: money/level, menu buttons, trick multiplier, speed, bail prompt, boost, injury feed, toasts.
 -- Kept big and sparse: each element only shows in the phases where it matters.
+-- Layout keeps clear of Roblox's own buttons (screens use CoreUISafeInsets) and of the
+-- phone thumbstick (bottom left) and jump/action buttons (bottom right): info sits along the top
+-- and right edge, menus on the left, prompts in the middle.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -65,35 +68,35 @@ end
 local function buildCentre(gui)
 	ui.mult = UiKit.label(anchored({ text = "x1", style = "Huge", color = P.Sun, outline = true, Size = UDim2.fromOffset(400, 90), Position = UDim2.new(0.5, 0, 0, 20), Parent = gui }, 0.5, 0))
 	ui.trick = UiKit.label(anchored({ text = "", style = "Heading", color = P.White, outline = true, Size = UDim2.fromOffset(500, 44), Position = UDim2.new(0.5, 0, 0, 110), Parent = gui }, 0.5, 0))
-	ui.start = UiKit.label(anchored({ key = "HUD_START", style = "Title", color = P.White, outline = true, Size = UDim2.fromOffset(700, 60), Position = UDim2.new(0.5, 0, 0.82, 0), Parent = gui }, 0.5, 0.5))
-	ui.bail = UiKit.panel(anchored({ Size = UDim2.fromOffset(620, 96), Position = UDim2.fromScale(0.5, 0.66), BackgroundColor3 = P.Coral, Visible = false, Parent = gui }, 0.5, 0.5))
+	ui.start = UiKit.label(anchored({ key = "HUD_START", style = "Title", color = P.White, outline = true, Size = UDim2.fromOffset(700, 60), Position = UDim2.fromScale(0.5, 0.7), Parent = gui }, 0.5, 0.5))
+	ui.bail = UiKit.panel(anchored({ Size = UDim2.fromOffset(620, 96), Position = UDim2.fromScale(0.5, 0.55), BackgroundColor3 = P.Coral, Visible = false, Parent = gui }, 0.5, 0.5))
 	ui.bailText = UiKit.label({ key = "HUD_BAIL", style = "Title", color = P.White, outline = true, Size = UDim2.fromScale(1, 1), Parent = ui.bail })
 	ui.toast = UiKit.panel(anchored({ Size = UDim2.fromOffset(520, 64), Position = UDim2.new(0.5, 0, 0, 160), BackgroundColor3 = P.Panel, Visible = false, Parent = gui }, 0.5, 0))
 	ui.toastText = UiKit.label({ text = "", style = "Heading", Size = UDim2.fromScale(1, 1), Parent = ui.toast })
 end
 
 local function buildBottom(gui)
-	ui.speed = UiKit.panel(anchored({ Size = UDim2.fromOffset(180, 90), Position = UDim2.new(0, 16, 1, -16), BackgroundColor3 = P.Sky, Parent = gui }, 0, 1))
+	ui.speed = UiKit.panel(anchored({ Size = UDim2.fromOffset(180, 90), Position = UDim2.new(1, -16, 0, 16), BackgroundColor3 = P.Sky, Parent = gui }, 1, 0))
 	ui.speedText = UiKit.label({ text = "0", style = "Title", color = P.White, outline = true, Size = UDim2.new(1, 0, 0.65, 0), Parent = ui.speed })
 	UiKit.label({ key = "HUD_SPEED", style = "Small", color = P.White, outline = true, Size = UDim2.new(1, 0, 0.35, 0), Position = UDim2.fromScale(0, 0.62), Parent = ui.speed })
 
 	ui.gear = Instance.new("Frame")
 	ui.gear.BackgroundTransparency = 1
 	ui.gear.Size = UDim2.fromOffset(260, 100)
-	ui.gear.Position = UDim2.new(1, -16, 1, -16)
-	ui.gear.AnchorPoint = Vector2.new(1, 1)
+	ui.gear.Position = UDim2.new(1, -16, 0, 120)
+	ui.gear.AnchorPoint = Vector2.new(1, 0)
 	ui.gear.Parent = gui
 	UiKit.label({ key = "HUD_BOOST", style = "Small", color = P.White, outline = true, Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Right, Parent = ui.gear })
 	ui.boostBar, ui.setBoost = UiKit.bar({ Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 26), color = P.Orange, Parent = ui.gear })
-	ui.boom = UiKit.label({ key = "HUD_BOOM", style = "Heading", color = P.Sun, outline = true, Size = UDim2.new(1, 0, 0, 40), Position = UDim2.fromOffset(0, 58), TextXAlignment = Enum.TextXAlignment.Right, Parent = ui.gear })
+	ui.boom = UiKit.label({ key = "HUD_BOOM", args = { 1 }, style = "Heading", color = P.Sun, outline = true, Size = UDim2.new(1, 0, 0, 40), Position = UDim2.fromOffset(0, 58), TextXAlignment = Enum.TextXAlignment.Right, Parent = ui.gear })
 end
 
 local function buildFeed(gui)
 	ui.feed = Instance.new("Frame")
 	ui.feed.BackgroundTransparency = 1
 	ui.feed.Size = UDim2.fromOffset(300, 420)
-	ui.feed.Position = UDim2.new(1, -16, 0.5, 0)
-	ui.feed.AnchorPoint = Vector2.new(1, 0.5)
+	ui.feed.Position = UDim2.new(1, -16, 0, 230)
+	ui.feed.AnchorPoint = Vector2.new(1, 0)
 	ui.feed.Parent = gui
 	UiKit.listLayout(ui.feed, nil, 8, Enum.HorizontalAlignment.Right)
 end
@@ -104,7 +107,7 @@ local function refreshProfile(profile)
 	UiKit.setText(ui.levelText, "HUD_LEVEL", (Progression.level(profile.totalEarned)))
 	local booster = Progression.equippedBooster(profile)
 	ui.boostBar.Visible = booster ~= nil
-	ui.gear.Visible = booster ~= nil or Progression.equippedExploder(profile) ~= nil
+	ui.gear.Visible = booster ~= nil or (Progression.equippedExploder(profile)) ~= nil
 end
 
 local function refreshPhase(phase)
@@ -215,7 +218,8 @@ local function step()
 		end
 		ui.bail.Visible = show
 	end
-	UiKit.setText(ui.boom, if GearController.exploderReady() then "HUD_BOOM" else "HUD_BOOM_USED")
+	local bombs = GearController.bombsLeft()
+	UiKit.setText(ui.boom, if bombs > 0 then "HUD_BOOM" else "HUD_BOOM_USED", bombs)
 end
 
 function Hud.create(windows)

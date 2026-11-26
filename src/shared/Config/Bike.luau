@@ -16,10 +16,11 @@ return {
 	SideslipAngle = 70, -- degrees between bike and travel direction = crash
 	LeaveGroundGrace = 0.25,
 	AutoBailIdle = 3, -- seconds stopped on the bike before auto-bail
-	Glide = { Accel = 30, Lift = 0.15 }, -- ragdoll air control
+	-- Ragdoll steering: Accel pushes you camera-relative, Spin tumbles you (both x Helmet glideControl).
+	Glide = { Accel = 110, Spin = 16, MaxSpin = 20 },
 	Rest = { Speed = 4, Time = 1.2, MaxTime = 20, KillY = -1200 },
-	-- Ragdoll body surface: grippy so tumbles slow down instead of sliding forever.
-	RagdollPhysics = { Density = 0.9, Friction = 1.2, Elasticity = 0.15, FrictionWeight = 5, ElasticityWeight = 1 },
+	-- Ragdoll body surface (Kneepads lower the friction, Body Armour raises the bounce).
+	RagdollPhysics = { Density = 0.9, Friction = 0.45, Elasticity = 0.15, FrictionWeight = 3, ElasticityWeight = 1 },
 	-- Upgradable stats and their starting values (see BikeUpgrades.luau).
 	Base = {
 		trickSpeed = 1,

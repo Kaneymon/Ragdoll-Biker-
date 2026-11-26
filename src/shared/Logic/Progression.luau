@@ -2,6 +2,7 @@
 local Config = script.Parent.Parent.Config
 local Bike = require(Config.Bike)
 local BikeUpgrades = require(Config.BikeUpgrades)
+local BikerUpgrades = require(Config.BikerUpgrades)
 local Ramp = require(Config.Ramp)
 local Boosters = require(Config.Boosters)
 local Exploders = require(Config.Exploders)
@@ -10,6 +11,11 @@ local Maps = require(Config.Maps)
 
 local Progression = {}
 
+-- Upgrade sets: profile[set][id] = level
+local SETS = {
+	bike = { list = BikeUpgrades, base = Bike.Base },
+	biker = { list = BikerUpgrades.list, base = BikerUpgrades.Base },
+}
 local GEAR = { boosters = Boosters, exploders = Exploders }
 
 local function find(list, id)
@@ -22,26 +28,36 @@ local function find(list, id)
 end
 Progression.find = find
 
--- Bike parts ---------------------------------------------------------------
-function Progression.bikeUpgrade(id)
-	return find(BikeUpgrades, id)
+-- Stat upgrades (bike parts, biker gear) --------------------------------------
+function Progression.upgradeSet(set)
+	return SETS[set]
 end
 
-function Progression.bikeUpgradeCost(def, level)
+function Progression.upgrade(set, id)
+	return SETS[set] and find(SETS[set].list, id)
+end
+
+function Progression.upgradeCost(def, level)
 	if level >= def.maxLevel then
 		return nil
 	end
 	return math.floor(def.baseCost * def.growth ^ level)
 end
 
-function Progression.bikeStatValue(def, level)
-	return Bike.Base[def.stat] + def.perLevel * level
+function Progression.statValue(set, def, level)
+	return SETS[set].base[def.stat] + def.perLevel * level
 end
 
-function Progression.bikeStats(profile)
-	local stats = table.clone(Bike.Base)
-	for _, def in BikeUpgrades do
-		stats[def.stat] = Progression.bikeStatValue(def, profile.bike[def.id] or 0)
+-- Every upgradable stat (bike and biker) for a profile, in one table.
+function Progression.stats(profile)
+	local stats = {}
+	for set, info in SETS do
+		for stat, value in info.base do
+			stats[stat] = value
+		end
+		for _, def in info.list do
+			stats[def.stat] = Progression.statValue(set, def, profile[set][def.id] or 0)
+		end
 	end
 	return stats
 end
@@ -91,6 +107,22 @@ function Progression.exploderForce(def, level)
 	return def.force * (1 + Exploders.forcePerLevel * level)
 end
 
+-- Bombs per run for an owned exploder (old saves without charges count as 1).
+function Progression.charges(profile, id)
+	if profile.exploders.owned[id] == nil then
+		return 0
+	end
+	return profile.exploders.charges[id] or 1
+end
+
+-- Price of the next extra bomb: price x 1, 5, 25... or nil when full.
+function Progression.chargeCost(def, charges)
+	if charges >= Exploders.maxCharges then
+		return nil
+	end
+	return math.floor(def.price * Exploders.chargeGrowth ^ charges)
+end
+
 local function equipped(profile, kind)
 	local slot = profile[kind]
 	local level = slot.owned[slot.equipped]
@@ -109,12 +141,13 @@ function Progression.equippedBooster(profile)
 	return Progression.boosterStats(def, level), def
 end
 
+-- Returns blast force (or nil), the config def and bombs per run.
 function Progression.equippedExploder(profile)
 	local def, level = equipped(profile, "exploders")
 	if not def then
-		return nil, nil
+		return nil, nil, 0
 	end
-	return Progression.exploderForce(def, level), def
+	return Progression.exploderForce(def, level), def, Progression.charges(profile, def.id)
 end
 
 -- Levels & maps ------------------------------------------------------------

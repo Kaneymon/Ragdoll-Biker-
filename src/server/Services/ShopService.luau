@@ -39,22 +39,44 @@ local function buyGear(kind)
 			slot.owned[id] = if level == nil then 0 else level + 1
 			if level == nil then
 				slot.equipped = id
+				if slot.charges then
+					slot.charges[id] = 1 -- a new exploder comes with one bomb
+				end
 			end
 		end)
 	end
 end
 
-local purchases = {
-	bike = function(profile, id)
-		local def = Progression.bikeUpgrade(id)
+-- Bike parts ("bike") and biker gear ("biker") level up the same way.
+local function buyUpgrade(set)
+	return function(profile, id)
+		local def = Progression.upgrade(set, id)
 		if not def then
 			return "NOTE_ERROR"
 		end
-		local level = profile.bike[id] or 0
-		return charge(profile, Progression.bikeUpgradeCost(def, level), function()
-			profile.bike[id] = level + 1
+		local level = profile[set][id] or 0
+		return charge(profile, Progression.upgradeCost(def, level), function()
+			profile[set][id] = level + 1
 		end)
-	end,
+	end
+end
+
+-- Extra bombs for an owned exploder (1x, 5x, 25x the price).
+local function buyCharge(profile, id)
+	local def = Progression.gearDef("exploders", id)
+	if not def or profile.exploders.owned[id] == nil then
+		return "NOTE_ERROR"
+	end
+	local charges = Progression.charges(profile, id)
+	return charge(profile, Progression.chargeCost(def, charges), function()
+		profile.exploders.charges[id] = charges + 1
+	end)
+end
+
+local purchases = {
+	bike = buyUpgrade("bike"),
+	biker = buyUpgrade("biker"),
+	charge = buyCharge,
 
 	ramp = function(profile)
 		return charge(profile, Progression.rampCost(profile.rampLevel), function()

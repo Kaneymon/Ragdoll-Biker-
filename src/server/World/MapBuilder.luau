@@ -8,7 +8,7 @@ local Props = require(script.Parent.Props)
 local MapBuilder = {}
 
 local KICKER_DEPTH = 40
-local WALL_HEIGHT = 1200
+local WALL_HEIGHT = 6000 -- tall enough that even nuke launches can't clear it
 
 local PROP_BUILDERS = { -- config key -> builder, upright (true) or follows the slope (false)
 	trees = { Props.tree, true },
@@ -106,9 +106,9 @@ local function buildGround(def, g, model)
 	Build.part({ Name = "Valley", Size = Vector3.new(4000, 20, 4000), CFrame = CFrame.new(g.origin.X, g.landEnd.Y - 10.5, (groundStart + g.landEnd.Z) / 2), Color = P.GrassDark, Parent = model })
 
 	local zMin, zMax = groundStart - 10, g.landEnd.Z + 400
-	local wallProps = { Transparency = 1, CanQuery = false, Parent = model }
+	-- Boundary walls look like a shimmering force field.
+	local wallProps = { Name = "ForceField", Material = Enum.Material.ForceField, Color = P.Sky, Transparency = 0.2, CastShadow = false, CanQuery = false, Parent = model }
 	for _, side in { -1, 1 } do
-		wallProps.Name = "Wall"
 		wallProps.Size = Vector3.new(4, WALL_HEIGHT, zMax - zMin)
 		wallProps.CFrame = CFrame.new(g.origin.X + side * (width / 2 + 2), g.landEnd.Y + WALL_HEIGHT / 2, (zMin + zMax) / 2)
 		Build.part(table.clone(wallProps))

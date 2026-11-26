@@ -7,13 +7,14 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Signal = require(Shared.Util.Signal)
 local Progression = require(Shared.Logic.Progression)
 local InjuryModel = require(Shared.Logic.InjuryModel)
+local TrickScore = require(Shared.Logic.TrickScore)
 local Tricks = require(Shared.Config.Tricks)
 
 local State = {
 	-- Phases: Loading, Ready (on bike, not moving), Riding, Air, Ragdoll, Resting, Payout
 	phase = "Loading",
 	profile = nil,
-	stats = nil, -- bike stats from upgrades
+	stats = nil, -- all upgrade stats (bike + biker)
 	character = nil,
 	run = nil,
 
@@ -48,13 +49,14 @@ end
 
 function State.setProfile(profile)
 	State.profile = profile
-	State.stats = Progression.bikeStats(profile)
+	State.stats = Progression.stats(profile)
 	State.ProfileChanged:Fire(profile)
 end
 
 function State.resetRun()
 	State.run = {
 		tricks = {},
+		combo = TrickScore.newCombo(),
 		multiplier = Tricks.StartMultiplier,
 		maxSpeed = 0,
 		trickBusy = false,

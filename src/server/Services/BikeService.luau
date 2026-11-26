@@ -111,7 +111,8 @@ function BikeService.detach(player)
 		Debris:AddItem(bike, BIKE_LIFETIME_AFTER_BAIL)
 	end
 	if character then
-		Ragdoll.enable(character)
+		local profile = DataService.get(player)
+		Ragdoll.enable(character, Ragdoll.surface(Progression.stats(profile)))
 	end
 end
 

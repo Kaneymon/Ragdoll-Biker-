@@ -1,6 +1,6 @@
 -- All player-facing text (English source). UI only ever uses these keys via Localize.
 -- {1}, {2} are filled in at runtime. Localize also builds a LocalizationTable from this.
-return {
+local Text = {
 	-- Buttons
 	BTN_UPGRADES = "UPGRADES",
 	BTN_STORE = "STORE",
@@ -20,6 +20,9 @@ return {
 	BTN_OFF = "OFF",
 	BTN_ROBUX = "R$ {1}",
 	BTN_OWNED = "Owned",
+	BTN_BUY = "Buy {1}",
+	BTN_UPGRADE = "Upgrade {1}",
+	BTN_EXTRA_BOMB = "+1 Bomb {1}",
 
 	-- Windows and tabs
 	WIN_UPGRADES = "Upgrades",
@@ -28,6 +31,7 @@ return {
 	TAB_MAPS = "Maps",
 	TAB_RAMP = "Ramp",
 	TAB_BIKE = "Bike",
+	TAB_BIKER = "Biker",
 	TAB_BOOSTERS = "Boosters",
 	TAB_EXPLODERS = "Exploders",
 	TAB_PASSES = "Passes",
@@ -48,7 +52,7 @@ return {
 	HUD_START_TOUCH = "Push the stick up to ride!",
 	HUD_LEVEL = "Lvl {1}",
 	HUD_BOOST = "BOOST",
-	HUD_BOOM = "BOOM ready!",
+	HUD_BOOM = "BOOM x{1}",
 	HUD_BOOM_USED = "BOOM used",
 	HUD_TRICK = "{1}! +{2}",
 	HUD_CRASH = "CRASH!",
@@ -67,6 +71,14 @@ return {
 	UPG_WHEELS_DESC = "Every trick gives more bonus",
 	UPG_SEAT = "Seat",
 	UPG_SEAT_DESC = "Fly further when you jump off",
+	UPG_HELMET = "Helmet",
+	UPG_HELMET_DESC = "Steer better while flying",
+	UPG_KNEEPADS = "Kneepads",
+	UPG_KNEEPADS_DESC = "Slide further on the ground",
+	UPG_ARMOUR = "Body Armour",
+	UPG_ARMOUR_DESC = "Bounce higher off things",
+	UPG_BOOTS = "Boots",
+	UPG_BOOTS_DESC = "Hurt more bones each hit",
 	UPG_LEVEL = "Level {1} / {2}",
 	UPG_STAT = "{1}  >  {2}",
 	RAMP_NAME = "Mega Ramp Start",
@@ -83,6 +95,7 @@ return {
 	EXP_RPG = "RPG",
 	EXP_NUKE = "NUKE-O-MATIC",
 	EXP_DESC = "Blast power {1}",
+	EXP_CHARGES = "Bombs: {1} / {2}",
 	MAP_HILL_PARK = "Hill and Park",
 	MAP_SKATE_PARK = "Skate Park",
 	MAP_STREETS = "Streets",
@@ -98,6 +111,7 @@ return {
 	TRICK_BARSPIN = "Barspin",
 	TRICK_SUPERMAN = "Superman",
 	TRICK_LAZYBOY = "Lazy Boy",
+	TRICK_CANCAN = "Can-Can",
 
 	-- Injuries
 	INJ_BRUISE = "Bruise",
@@ -108,30 +122,20 @@ return {
 	INJ_TEAR = "Torn Ligament",
 	INJ_CONCUSSION = "Concussion",
 	INJ_DISLOCATION = "Dislocation",
-	INJ_FRACTURE = "Fracture",
 	INJ_INTERNAL = "Internal Bleeding",
-	INJ_BREAK = "Broken Bone",
 	INJ_HEMORRHAGE = "Hemorrhage",
-	INJ_COMPOUND = "Compound Fracture",
 
-	-- Bones
-	BONE_SKULL = "Skull",
-	BONE_JAW = "Jaw",
-	BONE_NECK = "Neck",
-	BONE_COLLAR = "Collarbone",
-	BONE_RIBS = "Ribs",
-	BONE_SPINE = "Spine",
-	BONE_PELVIS = "Hips",
-	BONE_ARM = "Arm",
-	BONE_FOREARM = "Forearm",
-	BONE_HAND = "Hand",
-	BONE_LEG = "Leg",
-	BONE_SHIN = "Shin",
-	BONE_FOOT = "Foot",
+	-- Bone damage statuses (bone names are added below from Config/Bones)
+	BONE_ST_CONTUSION = "Bruised Bones",
+	BONE_ST_FRACTURE = "Cracked Bones",
+	BONE_ST_BREAK = "Broken Bones",
+	BONE_ST_MULTI = "Broken in Bits",
+	BONE_ST_SHATTERED = "Shattered Bones",
+	BONE_ST_DUST = "Turned to Dust",
 
 	-- Payout sheet
 	PAY_TITLE = "INSURANCE PAYOUT",
-	PAY_BONES = "Bones hurt: {1}",
+	PAY_BONES = "Bones hurt: {1} / {2}",
 	PAY_INJURIES = "Injuries",
 	PAY_NONE = "Not a scratch!",
 	PAY_BILL = "Hospital bill",
@@ -193,6 +197,7 @@ return {
 	ACT_BARSPIN = "Barspin",
 	ACT_SUPERMAN = "Superman",
 	ACT_LAZYBOY = "Lazy Boy",
+	ACT_CANCAN = "Can-Can",
 	ACT_PEDAL = "Pedal",
 	ACT_BRAKE = "Brake",
 	ACT_STEER = "Steer",
@@ -208,3 +213,10 @@ return {
 	NOTE_ERROR = "Oops! Try again.",
 	NOTE_LEVEL_UP = "LEVEL UP! You are level {1}!",
 }
+
+-- One name per bone: BONE_<id>
+for _, bone in require(script.Parent.Bones).list do
+	Text["BONE_" .. bone.id] = bone.label
+end
+
+return Text
