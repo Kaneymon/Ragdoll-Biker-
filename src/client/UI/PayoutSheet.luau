@@ -50,6 +50,14 @@ local function show(sheet)
 		order += 1
 		line(list, order, "- " .. Localize.get("PAY_HITS"), Format.money(sheet.impactMoney), P.Money)
 	end
+	if sheet.luckyMoney > 0 then -- lucky hits, best first
+		order += 1
+		local names = {}
+		for _, item in sheet.lucky do
+			table.insert(names, Localize.get(InjuryModel.luckyDef(item.id).nameKey) .. " " .. Localize.get("PAY_COUNT", item.count))
+		end
+		line(list, order, "- " .. Localize.get("PAY_LUCKY") .. ": " .. table.concat(names, ", "), Format.money(sheet.luckyMoney), P.Money)
+	end
 	for _, item in sheet.statuses do -- bones by how badly they're hurt, worst first
 		order += 1
 		local status = InjuryModel.status(item.id)

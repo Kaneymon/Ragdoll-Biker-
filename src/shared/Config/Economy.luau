@@ -6,4 +6,7 @@ return {
 	DataStoreName = "RagdollBiker_v1",
 	Offer = { minDiscount = 5, maxDiscount = 25, megaDiscount = 80, megaChance = 1 / 250 },
 	DoubleMoneyRobux = 10,
+	-- Testing mode (Settings > Effects): everything is free and level locks are skipped.
+	-- Only offered in Studio, to the place owner and to the listed user ids.
+	TestMode = { inStudio = true, owner = true, userIds = {} },
 }

@@ -2,6 +2,7 @@
 --  * rotation tricks (flips) from how far the bike has actually turned,
 --  * move tricks (tailwhip, barspin) from a button press, counted when the spin finishes,
 --  * grabs (superman, lazy boy, can-can) held with a button, counted every tick while held.
+--    Grabs also work while ragdolling (the limp body is pulled into the pose) for a share of the score.
 -- Landing or bailing mid-move or mid-grab loses that move. Also picks the rider's pose.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,6 +12,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Tricks = require(Shared.Config.Tricks)
 local TrickScore = require(Shared.Logic.TrickScore)
 local RiderPose = require(Shared.Logic.RiderPose)
+local Ragdoll = require(Shared.Logic.Ragdoll)
+local Poses = require(Shared.Config.Poses)
 local State = require(script.Parent.Parent.State)
 local Input = require(script.Parent.Input)
 local BikeController = require(script.Parent.BikeController)
@@ -32,15 +35,37 @@ end
 
 local turned = { pitch = 0, roll = 0 }
 local lastCFrame = nil
-local active = nil -- { def, t } for the move or grab in progress
+local active = nil -- { def, t, ragdoll } for the move or grab in progress
 
-local function award(def)
+local function award(def, ragdoll)
 	local run = State.run
-	table.insert(run.tricks, def.id)
-	local bonus = TrickScore.award(run.combo, def.id, State.stats.trickBonus)
-	run.multiplier = TrickScore.multiplier(run.tricks, State.stats.trickBonus)
-	Players.LocalPlayer:SetAttribute("RunTricks", #run.tricks)
+	table.insert(if ragdoll then run.ragdollTricks else run.tricks, def.id)
+	local bonus = TrickScore.award(run.combo, def.id, State.stats.trickBonus, ragdoll)
+	run.multiplier = TrickScore.multiplier(run.tricks, State.stats.trickBonus, run.ragdollTricks)
+	Players.LocalPlayer:SetAttribute("RunTricks", #run.tricks + #run.ragdollTricks)
 	State.Trick:Fire(def, bonus, run.multiplier)
+end
+
+local function poseJoints(poseName)
+	local names = {}
+	for name in Poses[poseName].joints do
+		table.insert(names, name)
+	end
+	return names
+end
+
+-- Pull the limp body into (or let it out of) a grab pose.
+local function ragdollPose(def, on)
+	local character = State.character
+	if not character then
+		return false
+	end
+	if on then
+		RiderPose.track(character, nil, def.pose)
+	else
+		RiderPose.release(character)
+	end
+	return Ragdoll.drive(character, poseJoints(def.pose), on)
 end
 
 local function rotationTrick(axis, direction)
@@ -87,13 +112,15 @@ end
 local function stopActive()
 	if active and active.def.kind == "move" then
 		spinJoint(active.def, 0)
+	elseif active and active.ragdoll then
+		ragdollPose(active.def, false)
 	end
 	active = nil
 	State.run.trickBusy = false
 end
 
-local function start(def)
-	active = { def = def, t = 0 }
+local function start(def, ragdoll)
+	active = { def = def, t = 0, ragdoll = ragdoll }
 	State.run.trickBusy = true
 end
 
@@ -114,7 +141,7 @@ local function stepActive(dt)
 		active.t += dt * State.stats.trickSpeed
 		while active.t >= Tricks.GrabTick do
 			active.t -= Tricks.GrabTick
-			award(def)
+			award(def, active.ragdoll)
 		end
 	end
 end
@@ -135,6 +162,8 @@ local function step(dt)
 	if State.phase == "Air" then
 		trackRotation()
 		stepActive(dt)
+	elseif State.phase == "Ragdoll" then
+		stepActive(dt)
 	end
 	if State.character and State.isRiding() then
 		RiderPose.blend(State.character, currentPose())
@@ -154,8 +183,13 @@ end
 
 local function onActionBegan(name)
 	local def = byAction[name]
-	if def and State.phase == "Air" and not active then
+	if not def or active then
+		return
+	end
+	if State.phase == "Air" then
 		start(def)
+	elseif State.phase == "Ragdoll" and def.kind == "grab" and ragdollPose(def, true) then
+		start(def, true)
 	end
 end
 

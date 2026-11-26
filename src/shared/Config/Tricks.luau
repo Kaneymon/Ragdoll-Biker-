@@ -12,6 +12,7 @@ return {
 	GrabTick = 0.25, -- seconds per grab tick (divided by trick speed)
 	GrabUpgradeShare = 0.25, -- share of the Wheels bonus each grab tick gets
 	SpinPose = "Tuck", -- rider pose while flipping
+	RagdollShare = 0.25, -- grabs held while ragdolling score this share of their usual bonus
 	list = {
 		{ id = "backflip", nameKey = "TRICK_BACKFLIP", kind = "rotation", axis = "pitch", sign = 1, bonus = 0.1 },
 		{ id = "frontflip", nameKey = "TRICK_FRONTFLIP", kind = "rotation", axis = "pitch", sign = -1, bonus = 0.12 },

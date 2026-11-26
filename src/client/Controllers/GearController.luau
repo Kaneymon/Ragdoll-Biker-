@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Progression = require(Shared.Logic.Progression)
 local Ragdoll = require(Shared.Logic.Ragdoll)
+local Net = require(Shared.Net)
 local State = require(script.Parent.Parent.State)
 local Input = require(script.Parent.Input)
 local BikeController = require(script.Parent.BikeController)
@@ -65,6 +66,7 @@ local function explode()
 		return
 	end
 	bombsLeft -= 1
+	Net.event("BombUsed"):FireServer()
 	local travel = part.AssemblyLinearVelocity
 	local direction = (Vector3.yAxis * EXPLODE_UP + (if travel.Magnitude > 1 then travel.Unit else Vector3.zero)).Unit
 	State.Exploded:Fire(part.Position, force)

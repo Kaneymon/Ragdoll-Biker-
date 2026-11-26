@@ -8,6 +8,7 @@ local Ramp = require(Shared.Config.Ramp)
 local Progression = require(Shared.Logic.Progression)
 local MapGeometry = require(Shared.Logic.MapGeometry)
 local Format = require(Shared.Util.Format)
+local Localize = require(Shared.Services.Localize)
 local Net = require(Shared.Net)
 local State = require(script.Parent.Parent.State)
 local Window = require(script.Parent.Window)
@@ -44,11 +45,14 @@ local function statText(def, value)
 	return Format.number(value)
 end
 
--- Price button: shows MAX at the top level, greys out when unaffordable.
+-- Price button: shows MAX at the top level, greys out when unaffordable, FREE in testing mode.
 -- key = label with the price as {1} (plain price by default).
 local function moneyButton(cost, onClick, key)
 	if not cost then
 		return { "BTN_MAX", color = P.Disabled, disabled = true }
+	end
+	if Progression.testMode(State.profile) then
+		return { key or "HUD_MONEY", { Localize.get("BTN_FREE") }, color = P.Grape, onClick = onClick }
 	end
 	return { key or "HUD_MONEY", { Format.money(cost) }, color = P.Money, onClick = onClick, disabled = State.profile.money < cost }
 end
@@ -68,7 +72,7 @@ function renderers.maps(window)
 			button = { if selected then "BTN_SELECTED" else "BTN_SELECT", color = if selected then P.Grape else P.Sky, disabled = selected, onClick = function()
 				Net.func("SelectMap"):InvokeServer(def.id)
 			end }
-		elseif level < def.level then
+		elseif level < def.level and not Progression.testMode(profile) then
 			button = { "BTN_LOCKED", { def.level }, color = P.Disabled, disabled = true }
 		else
 			button = moneyButton(def.price, function()

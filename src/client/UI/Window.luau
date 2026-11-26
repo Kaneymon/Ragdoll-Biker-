@@ -6,6 +6,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Theme = require(Shared.Config.Theme)
 local P = require(Shared.Config.Palette)
 local Assets = require(Shared.Config.UiAssets)
+local Sfx = require(Shared.Services.Sfx)
 local UiKit = require(script.Parent.UiKit)
 
 local Window = {}
@@ -82,10 +83,14 @@ function Window:refresh()
 end
 
 function Window:open()
-	if openWindow and openWindow ~= self then
-		openWindow:close()
-	end
+	local previous = openWindow
 	openWindow = self
+	if previous and previous ~= self then
+		previous:close() -- quietly: switching windows only plays the open sound
+	end
+	if not self.root.Visible then
+		Sfx.play("WindowOpen")
+	end
 	self.root.Visible = true
 	if self.tab then
 		self:select(self.tab)
@@ -96,6 +101,9 @@ function Window:open()
 end
 
 function Window:close()
+	if self.root.Visible and openWindow == self then
+		Sfx.play("WindowClose")
+	end
 	self.root.Visible = false
 	if openWindow == self then
 		openWindow = nil

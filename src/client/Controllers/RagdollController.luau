@@ -71,21 +71,36 @@ end
 local function finish()
 	active = nil
 	State.setPhase("Resting")
-	Net.event("RunFinished"):FireServer()
+	Net.event("RunFinished"):FireServer(State.run.ragdollTricks)
 end
 
--- How much steering you get right now: grows with speed up to Glide.FullSpeed, and is much
--- weaker while the body is touching the ground.
-local function controlShare()
-	local g = Bike.Glide
-	local speedShare = math.clamp(active.core.AssemblyLinearVelocity.Magnitude / g.FullSpeed, g.MinShare, 1)
+local function onGround()
 	groundParams.FilterDescendantsInstances = { workspace:FindFirstChild("World") }
-	local onGround = workspace:Raycast(active.core.Position, Vector3.new(0, -g.GroundReach, 0), groundParams) ~= nil
-	return speedShare * (if onGround then g.GroundShare else 1)
+	return workspace:Raycast(active.core.Position, Vector3.new(0, -Bike.Glide.GroundReach, 0), groundParams) ~= nil
+end
+
+-- Ground steering: Kneepads (slide) take it from GroundShare up to full and beyond.
+local function groundControl(stats)
+	local g = Bike.Glide
+	return g.GroundShare + (1 - g.GroundShare) * stats.slide / g.FullGroundSlide
+end
+
+-- Air steering: Helmet airControl, topped up towards full control as speed builds.
+local function airControl(stats)
+	if stats.airControl >= 1 then
+		return stats.airControl
+	end
+	local speedShare = math.clamp(active.core.AssemblyLinearVelocity.Magnitude / Bike.Glide.FullSpeed, 0, 1)
+	return stats.airControl + (1 - stats.airControl) * speedShare
+end
+
+-- How much steering you get right now (see Config/Bike Glide).
+local function control()
+	return if onGround() then groundControl(State.stats) else airControl(State.stats)
 end
 
 -- Camera-relative steering: WASD pushes the body and makes it tumble/flail in that direction
--- (W/S flips forwards/backwards, A/D cartwheels). Strength scales with the Helmet upgrade.
+-- (W/S flips forwards/backwards, A/D cartwheels). Strength scales with Helmet and Kneepads.
 local function glide(dt)
 	local move = Input.move()
 	if move.Magnitude < 0.1 then
@@ -93,14 +108,14 @@ local function glide(dt)
 	end
 	local camera = workspace.CurrentCamera.CFrame
 	local look, right = flat(camera.LookVector), flat(camera.RightVector)
-	local control = State.stats.glideControl * controlShare()
+	local strength = control()
 	local direction = look * -move.Z + right * move.X
 	if direction.Magnitude > 0 then
-		Ragdoll.addVelocity(active.character, direction.Unit * Bike.Glide.Accel * control * dt)
+		Ragdoll.addVelocity(active.character, direction.Unit * Bike.Glide.Accel * strength * dt)
 	end
 	local spinAxis = right * move.Z + look * -move.X
-	local spin = active.core.AssemblyAngularVelocity + spinAxis * Bike.Glide.Spin * control * dt
-	local maxSpin = Bike.Glide.MaxSpin * control
+	local spin = active.core.AssemblyAngularVelocity + spinAxis * Bike.Glide.Spin * strength * dt
+	local maxSpin = Bike.Glide.MaxSpin * strength
 	active.core.AssemblyAngularVelocity = if spin.Magnitude > maxSpin then spin.Unit * maxSpin else spin
 end
 

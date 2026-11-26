@@ -1,4 +1,4 @@
--- Builds the cartoon BMX from simple shapes (placeholder until the Blender mesh is imported).
+-- Builds the cartoon BMX from simple shapes, plus the equipped booster (World/GearBuilder).
 -- Rig (all in chassis space, -Z = forward):
 --   Chassis (invisible physics root)
 --     Motor6D "Whip"  -> FrameRoot (frame, fork, wheels, gear)   tailwhip spins this
@@ -9,6 +9,7 @@ local Shared = ReplicatedStorage.Shared
 local P = require(Shared.Config.Palette)
 local Bike = require(Shared.Config.Bike)
 local Build = require(script.Parent.Build)
+local GearBuilder = require(script.Parent.GearBuilder)
 
 local BikeBuilder = {}
 
@@ -22,6 +23,7 @@ local POINTS = {
 	headTop = Vector3.new(0, 0.75, -1.5),
 	headBottom = Vector3.new(0, 0.05, -1.7),
 	barsPivot = Vector3.new(0, 0.75, -1.5),
+	boosterStrut = Vector3.new(0, 0.45, 1.3), -- where the booster's support bar meets the frame
 }
 local FRAME_COLOR, ACCENT = P.Coral, P.Sun
 local SLIPPERY = PhysicalProperties.new(1, 0, 0, 100, 100)
@@ -112,17 +114,7 @@ local function barsParts(model)
 	return parts
 end
 
--- Placeholder gear: coloured blocks where the booster/exploder sit on the bike.
-local function gearMount(name, def, at, size, model)
-	local part = visual({ Name = name, Size = size, CFrame = CFrame.new(at), Color = def.color }, model)
-	local nozzle = Instance.new("Attachment")
-	nozzle.Name = "Nozzle"
-	nozzle.Position = Vector3.new(0, 0, size.Z / 2)
-	nozzle.Parent = part
-	return part
-end
-
--- gear = { booster = def?, exploder = def? }
+-- gear = { booster = def? } (exploder bombs ride on the rider's belt, see GearService)
 function BikeBuilder.build(gear)
 	local model = Instance.new("Model")
 	model.Name = "Bike"
@@ -134,10 +126,8 @@ function BikeBuilder.build(gear)
 	local frameRoot = pivotPart("FrameRoot", POINTS.headTop, model)
 	local frame = frameParts(model)
 	if gear.booster then
-		table.insert(frame, gearMount("BoosterMount", gear.booster, Vector3.new(0, 0.2, 2.9), Vector3.new(0.9, 0.9, 1.4), model))
-	end
-	if gear.exploder then
-		table.insert(frame, gearMount("ExploderMount", gear.exploder, Vector3.new(0, -0.1, -0.45), Vector3.new(0.8, 0.8, 0.8), model))
+		local booster = Build.model("Booster", model)
+		table.insert(frame, GearBuilder.booster(gear.booster.id, CFrame.new(), POINTS.boosterStrut, booster))
 	end
 	weldAll(frameRoot, frame)
 	motor("Whip", chassis, frameRoot, POINTS.headTop)

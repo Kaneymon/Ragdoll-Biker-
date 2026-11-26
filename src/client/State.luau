@@ -29,6 +29,7 @@ local State = {
 	Impact = Signal.new(), -- (part, speedChange, result)
 	Exploded = Signal.new(), -- (position, force)
 	BoostChanged = Signal.new(), -- (boosting, fuelFraction)
+	LuckyHit = Signal.new(), -- (luckyDef, extraMoney) server rolled a lucky hit
 	Payout = Signal.new(), -- (sheet)
 	CashedOut = Signal.new(), -- (total)
 	Notify = Signal.new(), -- (textKey, ...)
@@ -56,6 +57,7 @@ end
 function State.resetRun()
 	State.run = {
 		tricks = {},
+		ragdollTricks = {}, -- grabs posed while ragdolling (score Tricks.RagdollShare)
 		combo = TrickScore.newCombo(),
 		multiplier = Tricks.StartMultiplier,
 		maxSpeed = 0,

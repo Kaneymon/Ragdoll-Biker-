@@ -1,7 +1,7 @@
 -- Hold the boost button for a short push. Upgrades add thrust and fuel.
 -- thrust = studs/s^2, fuel = seconds. upgrade cost = price * upgradeCostScale * upgradeGrowth^level
 return {
-	upgradeCostScale = 0.5,
+	upgradeCostScale = 0.25,
 	upgradeGrowth = 1.8,
 	thrustPerLevel = 0.1,
 	fuelPerLevel = 0.08,

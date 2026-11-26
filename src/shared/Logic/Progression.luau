@@ -162,4 +162,9 @@ function Progression.map(id)
 	return find(Maps.list, id)
 end
 
+-- Testing mode: everything free (the server only lets allowed players turn it on).
+function Progression.testMode(profile)
+	return profile.settings.testMode == true
+end
+
 return Progression

@@ -13,6 +13,7 @@ local Progression = require(Shared.Logic.Progression)
 local Ragdoll = require(Shared.Logic.Ragdoll)
 local Net = require(Shared.Net)
 local DataService = require(script.Parent.DataService)
+local GearService = require(script.Parent.GearService)
 local BikeService = require(script.Parent.BikeService)
 local ShopService = require(script.Parent.ShopService)
 
@@ -21,6 +22,7 @@ local RunTracker = {}
 local MAX_IMPACTS_PER_BATCH = 40
 local SERVER_REST_TIMEOUT = Bike.Rest.MaxTime + 10
 local runs = {} -- player -> run
+local luckRng = Random.new()
 
 local function corePosition(player)
 	local core = player.Character and Ragdoll.core(player.Character)
@@ -32,12 +34,14 @@ local function newRun(player)
 		phase = "Riding",
 		report = InjuryModel.new(),
 		tricks = {},
+		ragdollTricks = {},
 		maxSpeed = 0,
 		startPos = corePosition(player),
 	}
 end
 
-local function validTricks(list)
+-- kind = only accept tricks of this kind (ragdoll poses are grabs).
+local function validTricks(list, kind)
 	local tricks = {}
 	if type(list) ~= "table" then
 		return tricks
@@ -46,7 +50,8 @@ local function validTricks(list)
 		if i > Tricks.MaxTricksPerRun then
 			break
 		end
-		if type(id) == "string" and TrickScore.def(id) then
+		local def = type(id) == "string" and TrickScore.def(id)
+		if def and (kind == nil or def.kind == kind) then
 			table.insert(tricks, id)
 		end
 	end
@@ -57,7 +62,7 @@ local function buildSheet(player, run)
 	local profile = DataService.get(player)
 	local stats = Progression.stats(profile)
 	local map = Progression.map(profile.maps.selected)
-	local multiplier = TrickScore.multiplier(run.tricks, stats.trickBonus)
+	local multiplier = TrickScore.multiplier(run.tricks, stats.trickBonus, run.ragdollTricks)
 	local summary = InjuryModel.summary(run.report, multiplier, map.payoutMult)
 	local finalPos = corePosition(player) or run.bailPos
 	local injuries = {}
@@ -69,24 +74,27 @@ local function buildSheet(player, run)
 		injuries = injuries,
 		bill = summary.bill,
 		impactMoney = summary.impactMoney,
+		luckyMoney = summary.luckyMoney,
+		lucky = summary.lucky,
 		multiplier = multiplier,
 		mapMult = map.payoutMult,
 		total = math.min(summary.total, Economy.MaxPayoutPerRun),
 		bonesHurt = summary.bonesHurt,
 		statuses = summary.statuses,
 		injuryCount = summary.injuryCount,
-		tricks = #run.tricks,
+		tricks = #run.tricks + #run.ragdollTricks,
 		maxSpeed = run.maxSpeed,
 		distance = if finalPos and run.bailPos then (finalPos - run.bailPos).Magnitude else 0,
 		fall = if finalPos and run.startPos then math.max(0, run.startPos.Y - finalPos.Y) else 0,
 	}
 end
 
-local function finish(player)
+local function finish(player, ragdollTricks)
 	local run = runs[player]
 	if not run or run.phase ~= "Ragdoll" then
 		return
 	end
+	run.ragdollTricks = validTricks(ragdollTricks, "grab")
 	run.phase = "Payout"
 	run.sheet = buildSheet(player, run)
 	Net.event("PayoutReady"):FireClient(player, run.sheet)
@@ -102,12 +110,25 @@ local function onBail(player, trickIds, maxSpeed)
 	run.maxSpeed = if type(maxSpeed) == "number" then math.clamp(maxSpeed, 0, Bike.MaxSpeed * 2) else 0
 	run.bailPos = corePosition(player)
 	run.bonesPerHit = Progression.stats(DataService.get(player)).bonesPerHit
+	run.spentEnough = ShopService.spentEnough(player)
 	BikeService.detach(player)
 	task.delay(SERVER_REST_TIMEOUT, function()
 		if runs[player] == run then
 			finish(player)
 		end
 	end)
+end
+
+-- Lucky hits: rolled on record (or near record after big spending) hits; beats the record too.
+local function rollLucky(player, run, speed, result)
+	local stats = DataService.get(player).stats
+	local rawMph = InjuryModel.rawMph(speed)
+	local lucky = InjuryModel.rollLucky(rawMph, stats.recordImpact, run.spentEnough, luckRng)
+	stats.recordImpact = math.max(stats.recordImpact, math.floor(rawMph))
+	if lucky then
+		local extra = InjuryModel.applyLucky(run.report, lucky, result.money)
+		Net.event("LuckyHit"):FireClient(player, lucky.id, extra)
+	end
 end
 
 local function onImpacts(player, batch)
@@ -120,7 +141,11 @@ local function onImpacts(player, batch)
 			break
 		end
 		if type(impact) == "table" and type(impact.part) == "string" and type(impact.speed) == "number" and impact.speed == impact.speed then
-			InjuryModel.applyImpact(run.report, impact.part, math.max(impact.speed, 0), run.bonesPerHit)
+			local speed = math.clamp(impact.speed, 0, Bike.MaxSpeed * 4)
+			local result = InjuryModel.applyImpact(run.report, impact.part, speed, run.bonesPerHit)
+			if result then
+				rollLucky(player, run, speed, result)
+			end
 		end
 	end
 end
@@ -156,6 +181,7 @@ local function onCashOut(player)
 		levelAfter = Progression.level(profile.totalEarned)
 		recordStats(profile, sheet)
 	end)
+	ShopService.resetSpending(player)
 	if levelAfter and levelAfter > levelBefore then
 		Net.event("Notify"):FireClient(player, "NOTE_LEVEL_UP", levelAfter)
 	end
@@ -192,6 +218,12 @@ function RunTracker.start()
 	Net.event("Bail").OnServerEvent:Connect(onBail)
 	Net.event("Impacts").OnServerEvent:Connect(onImpacts)
 	Net.event("RunFinished").OnServerEvent:Connect(finish)
+	Net.event("BombUsed").OnServerEvent:Connect(function(player)
+		local run = runs[player]
+		if run and (run.phase == "Riding" or run.phase == "Ragdoll") then
+			GearService.useBomb(player)
+		end
+	end)
 	Net.func("CashOut").OnServerInvoke = onCashOut
 end
 

@@ -1,10 +1,14 @@
 -- In-game money purchases: bike parts, ramp, boosters, exploders, maps. Also equip/select/settings.
 -- Every price comes from Logic/Progression so the menus and the server always agree.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage.Shared
 local Progression = require(Shared.Logic.Progression)
 local Template = require(Shared.Config.ProfileTemplate)
+local Economy = require(Shared.Config.Economy)
+local Injuries = require(Shared.Config.Injuries)
 local Net = require(Shared.Net)
 local DataService = require(script.Parent.DataService)
 
@@ -13,14 +17,41 @@ local Signal = require(Shared.Util.Signal)
 -- Fired when something that changes the bike/spawn was bought or picked (ramp, gear, map).
 local ShopService = { LoadoutChanged = Signal.new() }
 local LOADOUT_KINDS = { ramp = true, boosters = true, exploders = true }
+local TEST_MODE_ATTRIBUTE = "CanTestMode"
+
+local spending = {} -- player -> { base = cash when spending started, spent = total spent since }
+local buyer = nil -- the player whose purchase is being handled (set by onPurchase)
+
+local function canTest(player)
+	local rules = Economy.TestMode
+	return (rules.inStudio and RunService:IsStudio())
+		or (rules.owner and game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId)
+		or table.find(rules.userIds, player.UserId) ~= nil
+end
+
+local function isFree(profile)
+	return Progression.testMode(profile) and buyer ~= nil and canTest(buyer)
+end
+
+local function trackSpend(profile, cost)
+	local record = spending[buyer] or { base = profile.money, spent = 0 }
+	record.spent += cost
+	spending[buyer] = record
+end
 
 -- Takes the money and applies the change, or returns an error text key.
 local function charge(profile, cost, apply)
 	if not cost then
 		return "NOTE_MAX"
 	end
+	if isFree(profile) then
+		cost = 0
+	end
 	if profile.money < cost then
 		return "NOTE_NO_MONEY"
+	end
+	if cost > 0 then
+		trackSpend(profile, cost)
 	end
 	profile.money -= cost
 	apply()
@@ -95,7 +126,7 @@ local purchases = {
 		if def.comingSoon then
 			return "NOTE_SOON"
 		end
-		if Progression.level(profile.totalEarned) < def.level then
+		if Progression.level(profile.totalEarned) < def.level and not isFree(profile) then
 			return "NOTE_NEED_LEVEL"
 		end
 		return charge(profile, def.price, function()
@@ -110,7 +141,10 @@ local function onPurchase(player, kind, id)
 	if not (profile and handler) or (id ~= nil and type(id) ~= "string") then
 		return false, "NOTE_ERROR"
 	end
-	local err = handler(profile, id)
+	buyer = player
+	local ok, err = pcall(handler, profile, id)
+	buyer = nil
+	err = if ok then err else "NOTE_ERROR"
 	if err then
 		return false, err
 	end
@@ -152,12 +186,34 @@ local function onSetSetting(player, settingKey, value)
 	if not profile or type(settingKey) ~= "string" or type(Template.settings[settingKey]) ~= type(value) then
 		return false
 	end
+	if settingKey == "testMode" and value and not canTest(player) then
+		return false
+	end
 	profile.settings[settingKey] = value
 	DataService.push(player)
 	return true
 end
 
+-- True when the player spent Lucky.SpendShare of their cash since their last payout.
+function ShopService.spentEnough(player)
+	local record = spending[player]
+	return record ~= nil and record.base > 0 and record.spent >= record.base * Injuries.Lucky.SpendShare
+end
+
+-- A payout starts a fresh spending count.
+function ShopService.resetSpending(player)
+	spending[player] = nil
+end
+
 function ShopService.start()
+	local function onPlayer(player)
+		player:SetAttribute(TEST_MODE_ATTRIBUTE, canTest(player))
+	end
+	Players.PlayerAdded:Connect(onPlayer)
+	for _, player in Players:GetPlayers() do
+		onPlayer(player)
+	end
+	Players.PlayerRemoving:Connect(ShopService.resetSpending)
 	Net.func("Purchase").OnServerInvoke = onPurchase
 	Net.func("Equip").OnServerInvoke = onEquip
 	Net.func("SelectMap").OnServerInvoke = onSelectMap

@@ -9,6 +9,7 @@ local Ragdoll = require(Shared.Logic.Ragdoll)
 local RiderPose = require(Shared.Logic.RiderPose)
 local DataService = require(script.Parent.DataService)
 local WorldService = require(script.Parent.WorldService)
+local GearService = require(script.Parent.GearService)
 local BikeBuilder = require(script.Parent.Parent.World.BikeBuilder)
 
 local BikeService = {}
@@ -30,8 +31,7 @@ end
 
 local function gearFor(profile)
 	local _, booster = Progression.equippedBooster(profile)
-	local _, exploder = Progression.equippedExploder(profile)
-	return { booster = booster, exploder = exploder }
+	return { booster = booster }
 end
 
 function BikeService.get(player)
@@ -80,6 +80,7 @@ local function mount(player, character)
 		end
 	end)
 
+	GearService.dress(character, profile)
 	RiderPose.apply(character, "Ride")
 	humanoid.PlatformStand = true
 	local chassis = bike.PrimaryPart

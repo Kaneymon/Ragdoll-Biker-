@@ -2,7 +2,7 @@
 -- Buying one gives 1 bomb per run; extra bombs cost price * chargeGrowth ^ owned (1x, 5x, 25x).
 -- Upgrading raises the blast power of every bomb of that type.
 return {
-	upgradeCostScale = 0.5,
+	upgradeCostScale = 0.25,
 	upgradeGrowth = 1.8,
 	forcePerLevel = 0.1,
 	maxLevel = 10,

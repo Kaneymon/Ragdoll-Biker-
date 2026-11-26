@@ -22,16 +22,26 @@ table.sort(worstStatusFirst, function(a, b)
 end)
 
 function InjuryModel.new()
-	return { bones = {}, injuries = {}, injuryOrder = {}, impactMoney = 0, impacts = 0 }
+	return { bones = {}, injuries = {}, injuryOrder = {}, impactMoney = 0, impacts = 0, lucky = {}, luckyMoney = 0 }
 end
 
 function InjuryModel.injury(id)
 	return injuryById[id]
 end
 
--- Speed change (studs/s) -> mph for one hit, capped.
+-- Speed change (studs/s) -> real mph, uncapped (records and lucky hits use this).
+function InjuryModel.rawMph(speedChange)
+	return speedChange * T.StudsToMph
+end
+
+-- Speed change (studs/s) -> damage mph for one hit: capped, then shaped by the difficulty curve.
 function InjuryModel.mph(speedChange)
-	return math.min(speedChange * T.StudsToMph, T.MaxHitMph)
+	local mph = math.min(InjuryModel.rawMph(speedChange), T.MaxHitMph)
+	local curve = T.Curve
+	if mph <= curve.PivotMph then
+		return mph * curve.Below
+	end
+	return curve.PivotMph * curve.Below + (mph - curve.PivotMph) * curve.Above
 end
 
 function InjuryModel.severity(mph)
@@ -88,7 +98,8 @@ function InjuryModel.applyImpact(report, partName, speedChange, bonesPerHit)
 		return nil
 	end
 	report.impacts += 1
-	report.impactMoney += T.ImpactValue * severity ^ T.Exponent
+	local money = T.ImpactValue * severity ^ T.Exponent
+	report.impactMoney += money
 
 	local count = math.max(1, math.floor((1 + mph / T.MphPerExtraBone) * (bonesPerHit or 1)))
 	local hitBones = pickBones(partName, count, report.impacts * 7919 + #partName * 104729)
@@ -102,8 +113,47 @@ function InjuryModel.applyImpact(report, partName, speedChange, bonesPerHit)
 			table.insert(report.injuryOrder, injury.id)
 		end
 		report.injuries[injury.id] = (report.injuries[injury.id] or 0) + 1
+		money += injury.value
 	end
-	return { severity = severity, mph = mph, injury = injury, bones = hitBones, region = region }
+	return { severity = severity, mph = mph, injury = injury, bones = hitBones, region = region, money = money }
+end
+
+-- A lucky hit pays its money (impact + injury) again (mult - 1) more times.
+function InjuryModel.applyLucky(report, lucky, hitMoney)
+	local extra = hitMoney * (lucky.mult - 1)
+	report.luckyMoney += extra
+	report.lucky[lucky.id] = (report.lucky[lucky.id] or 0) + 1
+	return extra
+end
+
+function InjuryModel.luckyDef(id)
+	for _, lucky in Injuries.Lucky.list do
+		if lucky.id == id then
+			return lucky
+		end
+	end
+	return nil
+end
+
+-- Rolls for a lucky hit. rawMph = the hit's real speed change, record = best ever so far,
+-- spentEnough = spent SpendShare of cash since the last payout. Returns the lucky def or nil.
+function InjuryModel.rollLucky(rawMph, record, spentEnough, rng)
+	local L = Injuries.Lucky
+	local isRecord = rawMph > record and rawMph >= L.MinRecordMph
+	local isNear = not isRecord and spentEnough and record > 0 and rawMph >= record * L.NearRecord
+	if not (isRecord or isNear) then
+		return nil
+	end
+	local roll, odds = rng:NextNumber(), 0 -- one roll, each modifier owns its own slice of chance
+	for _, lucky in L.list do
+		if rawMph >= lucky.minMph then
+			odds += if isRecord then lucky.recordChance else lucky.nearChance
+			if roll < odds then
+				return lucky
+			end
+		end
+	end
+	return nil
 end
 
 -- Totals for the payout sheet.
@@ -128,10 +178,18 @@ function InjuryModel.summary(report, multiplier, mapMult)
 		injuryMoney += injuryById[id].value * count
 		injuryCount += count
 	end
-	local bill = math.floor(report.impactMoney + boneMoney + injuryMoney)
+	local bill = math.floor(report.impactMoney + boneMoney + injuryMoney + report.luckyMoney)
+	local lucky = {}
+	for _, def in Injuries.Lucky.list do
+		if report.lucky[def.id] then
+			table.insert(lucky, { id = def.id, count = report.lucky[def.id] })
+		end
+	end
 	return {
 		bill = bill,
 		impactMoney = math.floor(report.impactMoney),
+		luckyMoney = math.floor(report.luckyMoney),
+		lucky = lucky,
 		total = math.floor(bill * multiplier * mapMult),
 		bonesHurt = hurt,
 		statuses = statuses,

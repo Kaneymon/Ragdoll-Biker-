@@ -103,6 +103,24 @@ function Ragdoll.enable(character, surface: PhysicalProperties)
 	character:SetAttribute("Ragdolled", true)
 end
 
+-- Ragdoll poses: switch the pose joints' drives on (torque-limited, so the limp body still
+-- tumbles) or back off. The pose itself is written to joint.Transform by Logic/RiderPose.
+-- AnimationConstraint rigs only; returns false when the rig can't be posed while limp.
+function Ragdoll.drive(character, jointNames, on: boolean)
+	if not Joints.usesConstraints(character) then
+		return false
+	end
+	for _, name in jointNames do
+		local joint = Joints.find(character, name)
+		if joint then
+			joint.IsKinematic = false
+			joint.MaxTorque = Bike.Glide.PoseTorque
+			joint.Enabled = on
+		end
+	end
+	return true
+end
+
 function Ragdoll.setVelocity(character, velocity)
 	for _, part in Ragdoll.parts(character) do
 		part.AssemblyLinearVelocity = velocity

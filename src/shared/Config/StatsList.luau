@@ -6,6 +6,7 @@ return {
 	{ key = "totalDistance", format = "number" },
 	{ key = "highestSpeed", format = "number" },
 	{ key = "furthestFall", format = "number" },
+	{ key = "recordImpact", format = "number" },
 	{ key = "recordBones", format = "number" },
 	{ key = "recordInjuries", format = "number" },
 	{ key = "totalTricks", format = "number" },

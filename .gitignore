@@ -3,3 +3,5 @@
 sourcemap.json
 __pycache__/
 assets/GUI/Basic_GUI_Bundle/
+assets/sound effects/_extracted/
+assets/sound effects/_upload/

@@ -72,9 +72,9 @@ local Text = {
 	UPG_SEAT = "Seat",
 	UPG_SEAT_DESC = "Fly further when you jump off",
 	UPG_HELMET = "Helmet",
-	UPG_HELMET_DESC = "Steer better while flying",
+	UPG_HELMET_DESC = "Steer better while flying (100% = full control)",
 	UPG_KNEEPADS = "Kneepads",
-	UPG_KNEEPADS_DESC = "Slide further on the ground",
+	UPG_KNEEPADS_DESC = "Slide further and steer better on the ground",
 	UPG_ARMOUR = "Body Armour",
 	UPG_ARMOUR_DESC = "Bounce higher off things",
 	UPG_BOOTS = "Boots",
@@ -145,6 +145,13 @@ local Text = {
 	PAY_MAP = "Map bonus",
 	PAY_TOTAL = "YOU GET",
 	PAY_COUNT = "x{1}",
+	PAY_LUCKY = "LUCKY HITS",
+
+	-- Lucky hits (Config/Injuries Lucky)
+	LUCKY_X2 = "LUCKY HIT! x2 money",
+	LUCKY_X4 = "SUPER LUCKY! x4 money",
+	LUCKY_X10 = "MEGA LUCKY!! x10 money",
+	LUCKY_NOTE = "{1}  +{2}",
 
 	-- Offer popup
 	OFFER_TITLE = "Special Deal!",
@@ -175,6 +182,7 @@ local Text = {
 	STAT_totalEarned = "Money earned",
 	STAT_highestSpeed = "Top speed",
 	STAT_furthestFall = "Longest fall",
+	STAT_recordImpact = "Hardest hit (mph)",
 	STAT_recordBones = "Most bones in one run",
 	STAT_recordInjuries = "Most injuries in one run",
 	STAT_totalMultiplier = "Total trick bonus",
@@ -186,6 +194,8 @@ local Text = {
 	SET_sfx = "Sound effects",
 	SET_vfx = "Sparkles and smoke",
 	SET_injuryFx = "Ouch effects",
+	SET_testMode = "Testing mode (everything free)",
+	BTN_FREE = "FREE",
 	CTRL_PC = "PC",
 	CTRL_CONSOLE = "Console",
 	CTRL_TOUCH = "Phone",

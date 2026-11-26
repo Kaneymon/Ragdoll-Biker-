@@ -1,8 +1,11 @@
 -- Maps. Geometry feeds Logic/MapGeometry (maths) and World/MapBuilder (parts).
 -- Each map: ramp length 2x the previous map, landing slope 3x the previous map.
--- origin = top of the mega ramp (downhill is +Z); all maps end near y = -250, side by side on X.
+-- origin = top of the mega ramp (downhill is +Z); all maps end near y = -250, side by side on X,
+-- SPACING apart, so every map can see (and see the riders on) its neighbours.
 -- props = how many of each prop per 1000 studs of landing slope (capped by PropCap).
 local P = require(script.Parent.Palette)
+
+local SPACING = 2000 -- studs between map centres on X (each force field box is 1620 wide)
 
 local function theme(ground, groundDark, ramp, kickerA, kickerB, rail)
 	return { ground = ground, groundDark = groundDark, ramp = ramp, kickerA = kickerA, kickerB = kickerB, rail = rail }
@@ -24,8 +27,8 @@ return {
 			props = { trees = 40, benches = 13, hay = 18, rocks = 20, tables = 7, bouncers = 5, fences = 9 },
 		},
 		{
-			id = "skate_park", nameKey = "MAP_SKATE_PARK", price = 250000, level = 12, payoutMult = 2,
-			origin = Vector3.new(3000, 1705, 0), seed = 11,
+			id = "skate_park", nameKey = "MAP_SKATE_PARK", price = 75000, level = 12, payoutMult = 2,
+			origin = Vector3.new(SPACING * 1, 1705, 0), seed = 11,
 			ramp = { angle = 32, length = 1360, width = 50, thickness = 8 },
 			runout = 70, kicker = { radius = 120, endAngle = 40, segments = 12 }, gap = 70,
 			landing = { angle = 14, length = 5100, width = 420 },
@@ -34,7 +37,7 @@ return {
 		},
 		{
 			id = "streets", nameKey = "MAP_STREETS", price = 2500000, level = 20, payoutMult = 4,
-			origin = Vector3.new(6000, 4893, 0), seed = 23,
+			origin = Vector3.new(SPACING * 2, 4893, 0), seed = 23,
 			ramp = { angle = 32, length = 2720, width = 56, thickness = 10 },
 			runout = 90, kicker = { radius = 160, endAngle = 40, segments = 14 }, gap = 90,
 			landing = { angle = 14, length = 15300, width = 420 },
@@ -43,7 +46,7 @@ return {
 		},
 		{
 			id = "mountain", nameKey = "MAP_MOUNTAIN", price = 25000000, level = 30, payoutMult = 8,
-			origin = Vector3.new(9000, 13737, 0), seed = 31,
+			origin = Vector3.new(SPACING * 3, 13737, 0), seed = 31,
 			ramp = { angle = 32, length = 5440, width = 64, thickness = 12 },
 			runout = 110, kicker = { radius = 200, endAngle = 40, segments = 16 }, gap = 110,
 			landing = { angle = 14, length = 45900, width = 420 },
@@ -52,7 +55,7 @@ return {
 		},
 		{
 			id = "space_station", nameKey = "MAP_SPACE", price = 250000000, level = 40, payoutMult = 16,
-			origin = Vector3.new(12000, 38828, 0), seed = 47,
+			origin = Vector3.new(SPACING * 4, 38828, 0), seed = 47,
 			ramp = { angle = 32, length = 10880, width = 72, thickness = 14 },
 			runout = 130, kicker = { radius = 240, endAngle = 40, segments = 18 }, gap = 130,
 			landing = { angle = 14, length = 137700, width = 420 },

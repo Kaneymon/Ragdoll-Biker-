@@ -5,7 +5,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Sfx = require(Shared.Services.Sfx)
 local Vfx = require(Shared.Services.Vfx)
+local Flashes = require(Shared.Config.Flashes)
 local State = require(script.Parent.Parent.State)
+local ScreenFlash = require(script.Parent.ScreenFlash)
 local BikeController = require(script.Parent.Parent.Controllers.BikeController)
 local CameraController = require(script.Parent.Parent.Controllers.CameraController)
 
@@ -31,6 +33,14 @@ local function onImpact(part, _speed, result)
 	end
 	Vfx.burst(if severity >= 1 then "BigImpact" else "Impact", part.Position, math.clamp(severity, 0.5, 2))
 	CameraController.shake(math.min(severity, 2.5))
+end
+
+-- Lucky hit: a flash that is redder and fades slower for the bigger multipliers.
+local function onLucky(lucky)
+	Sfx.play(if lucky.mult >= 10 then "LuckyBig" else "Lucky")
+	if Vfx.enabled then
+		ScreenFlash.flash(Flashes[lucky.flash])
+	end
 end
 
 local function onTrick()
@@ -60,9 +70,9 @@ end
 local function onBoost(on)
 	if on and not boost.sound then
 		local chassis = BikeController.chassis()
-		local mount = chassis and chassis.Parent:FindFirstChild("BoosterMount")
+		local mount = chassis and chassis.Parent:FindFirstChild("BoosterMount", true)
 		boost.sound = Sfx.loop("Boost", mount)
-		boost.flame = if mount then Vfx.attach("Boost", mount.Nozzle) else nil
+		boost.flame = if mount then Vfx.attach(mount:GetAttribute("Flame") or "Boost", mount.Nozzle) else nil
 	end
 	if boost.sound then
 		boost.sound:set(on)
@@ -91,6 +101,7 @@ function Feedback.start()
 	State.ProfileChanged:Connect(onProfile)
 	State.Impact:Connect(onImpact)
 	State.Trick:Connect(onTrick)
+	State.LuckyHit:Connect(onLucky)
 	State.Exploded:Connect(onExploded)
 	State.BoostChanged:Connect(onBoost)
 	State.PhaseChanged:Connect(onPhase)

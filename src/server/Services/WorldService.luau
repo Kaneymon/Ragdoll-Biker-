@@ -3,7 +3,9 @@ local PhysicsService = game:GetService("PhysicsService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
+local Lighting = game:GetService("Lighting")
 local Maps = require(Shared.Config.Maps)
+local Environment = require(Shared.Config.Environment)
 local Bike = require(Shared.Config.Bike)
 local MapGeometry = require(Shared.Logic.MapGeometry)
 local Localize = require(Shared.Services.Localize)
@@ -40,6 +42,17 @@ local function buildMaps()
 	end
 end
 
+local function setupEnvironment()
+	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
+	for key, value in Environment.Atmosphere do
+		atmosphere[key] = value
+	end
+	atmosphere.Parent = Lighting
+	for key, value in Environment.Lighting do
+		Lighting[key] = value
+	end
+end
+
 function WorldService.spawnCFrame(mapId, rampLevel, slot)
 	local side = ((slot % 3) - 1) * SPAWN_SPREAD
 	return MapGeometry.spawnCFrame(MapGeometry.def(mapId), rampLevel, Bike.Hover, side)
@@ -47,7 +60,9 @@ end
 
 function WorldService.start()
 	-- workspace.FallenPartsDestroyHeight is set to -2000 in the place (scripts can't write it).
+	-- workspace.StreamingEnabled is off in the place (scripts can't write it either).
 	setupCollisionGroups()
+	setupEnvironment()
 	Localize.publishTable()
 	buildMaps()
 	folder("Bikes")

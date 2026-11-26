@@ -18,8 +18,8 @@ function TrickScore.newCombo()
 	return { lastTrick = nil, lastFlip = nil }
 end
 
--- Bonus for doing `id` next in this combo (updates the combo).
-function TrickScore.award(combo, id, trickBonus)
+-- Bonus for doing `id` next in this combo (updates the combo). ragdoll = posed while limp.
+function TrickScore.award(combo, id, trickBonus, ragdoll)
 	local def = byId[id]
 	if not def then
 		return 0
@@ -35,17 +35,23 @@ function TrickScore.award(combo, id, trickBonus)
 		bonus *= Tricks.TrickVariety
 	end
 	combo.lastTrick = id
-	return bonus
+	return if ragdoll then bonus * Tricks.RagdollShare else bonus
 end
 
-function TrickScore.multiplier(trickIds, trickBonus)
+-- Riding tricks first, then poses held while ragdolling (same combo, RagdollShare of the bonus).
+function TrickScore.multiplier(trickIds, trickBonus, ragdollIds)
 	local combo = TrickScore.newCombo()
 	local mult = Tricks.StartMultiplier
-	for i, id in trickIds do
-		if i > Tricks.MaxTricksPerRun then
-			break
+	local count = 0
+	for _, list in { trickIds, ragdollIds or {} } do
+		local ragdoll = list == ragdollIds
+		for _, id in list do
+			count += 1
+			if count > Tricks.MaxTricksPerRun then
+				break
+			end
+			mult += TrickScore.award(combo, id, trickBonus, ragdoll)
 		end
-		mult += TrickScore.award(combo, id, trickBonus)
 	end
 	return math.floor(mult * 100 + 0.5) / 100
 end

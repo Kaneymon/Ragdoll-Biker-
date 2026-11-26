@@ -1,4 +1,5 @@
 -- SETTINGS: player stats, gamepasses, effect toggles and the controls list.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
@@ -33,6 +34,7 @@ local FORMATTERS = {
 }
 
 local layout = "pc"
+local TEST_MODE_ATTRIBUTE = "CanTestMode" -- set by the server for players allowed to use it
 
 local renderers = {}
 
@@ -56,8 +58,16 @@ function renderers.passes(window)
 	end
 end
 
+local function toggles()
+	local list = table.clone(TOGGLES)
+	if Players.LocalPlayer:GetAttribute(TEST_MODE_ATTRIBUTE) then
+		table.insert(list, "testMode")
+	end
+	return list
+end
+
 function renderers.effects(window)
-	for i, key in TOGGLES do
+	for i, key in toggles() do
 		local on = State.profile.settings[key]
 		Card.new(window.body, {
 			title = { "SET_" .. key },

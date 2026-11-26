@@ -5,6 +5,9 @@ return {
 		StudsToMph = 0.626, -- 1 stud = 0.28 m
 		MinHitMph = 20, -- speed change needed to hurt
 		MaxHitMph = 1000, -- one hit never counts for more than this
+		-- Difficulty curve on each hit's mph: up to PivotMph hits count x Below (easier to get hurt),
+		-- every mph past it counts x Above (harder).
+		Curve = { PivotMph = 500, Below = 1.25, Above = 0.6 },
 		SeverityMph = 60, -- extra mph for injury severity 1 (picks the medical injury)
 		ImpactValue = 6, -- $ per hit at severity 1
 		Exponent = 1.6, -- bigger hits pay much more
@@ -22,6 +25,22 @@ return {
 		{ id = "multi_break", nameKey = "BONE_ST_MULTI", minMph = 1600, value = 10 },
 		{ id = "shattered", nameKey = "BONE_ST_SHATTERED", minMph = 3000, value = 18 },
 		{ id = "dust", nameKey = "BONE_ST_DUST", minMph = 5000, value = 30 },
+	},
+
+	-- Rare lucky hits that multiply the money for that hit (the server rolls them, best first).
+	-- A hit is a "record" when its speed change beats your best ever (and is at least MinRecordMph),
+	-- "near record" when it is within NearRecord of it AND you spent SpendShare of your cash
+	-- since your last payout. minMph = the hit's raw speed change needed for that modifier.
+	-- flash = Config/Flashes entry shown on screen.
+	Lucky = {
+		MinRecordMph = 60,
+		NearRecord = 0.85,
+		SpendShare = 0.75,
+		list = {
+			{ id = "x10", nameKey = "LUCKY_X10", mult = 10, recordChance = 0.025, nearChance = 0.0625, minMph = 1500, flash = "Lucky10" },
+			{ id = "x4", nameKey = "LUCKY_X4", mult = 4, recordChance = 0.05, nearChance = 0.125, minMph = 0, flash = "Lucky4" },
+			{ id = "x2", nameKey = "LUCKY_X2", mult = 2, recordChance = 0.10, nearChance = 0.25, minMph = 0, flash = "Lucky2" },
+		},
 	},
 
 	-- Per hit, the worst medical injury whose minSeverity is reached (and region matches) is given.
