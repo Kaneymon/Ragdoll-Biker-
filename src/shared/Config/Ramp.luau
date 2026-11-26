@@ -1,9 +1,10 @@
 -- Mega ramp start height. Each level starts you further up the slope (more speed).
--- Costs climb faster than payouts on purpose so later levels take real effort.
+-- Start = a fraction of the selected map's ramp length, so the same level is worth more
+-- on bigger maps. Costs climb faster than payouts on purpose so later levels take real effort.
 return {
-	maxLevel = 25,
-	startBase = 70, -- studs up the slope at level 0
-	startPerLevel = 22,
+	maxLevel = 30,
+	startFraction = 0.1, -- level 0 starts 10% up the ramp
+	topFraction = 0.99, -- max level starts almost at the top
 	baseCost = 120,
-	growth = 1.42,
+	growth = 1.45,
 }

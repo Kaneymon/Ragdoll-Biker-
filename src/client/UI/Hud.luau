@@ -42,9 +42,11 @@ end
 
 local function buildTopLeft(gui)
 	ui.money = UiKit.panel({ Size = UDim2.fromOffset(240, 60), Position = UDim2.fromOffset(16, 16), BackgroundColor3 = P.Money, Parent = gui })
-	ui.moneyText = UiKit.label({ text = "$0", style = "Heading", color = P.White, outline = true, Size = UDim2.fromScale(1, 1), Parent = ui.money })
-	ui.level = UiKit.panel({ Size = UDim2.fromOffset(120, 60), Position = UDim2.fromOffset(266, 16), BackgroundColor3 = P.Grape, Parent = gui })
-	ui.levelText = UiKit.label({ key = "HUD_LEVEL", args = { 1 }, style = "Heading", color = P.White, outline = true, Size = UDim2.fromScale(1, 1), Parent = ui.level })
+	UiKit.icon("coin", { Size = UDim2.fromOffset(70, 70), Position = UDim2.new(0, -18, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Parent = ui.money })
+	ui.moneyText = UiKit.label({ text = "$0", style = "Heading", color = P.White, outline = true, Size = UDim2.new(1, -56, 1, 0), Position = UDim2.fromOffset(52, 0), Parent = ui.money })
+	ui.level = UiKit.panel({ Size = UDim2.fromOffset(140, 60), Position = UDim2.fromOffset(270, 16), BackgroundColor3 = P.Grape, Parent = gui })
+	UiKit.icon("star", { Size = UDim2.fromOffset(64, 64), Position = UDim2.new(0, -14, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Parent = ui.level })
+	ui.levelText = UiKit.label({ key = "HUD_LEVEL", args = { 1 }, style = "Heading", color = P.White, outline = true, Size = UDim2.new(1, -46, 1, 0), Position = UDim2.fromOffset(44, 0), Parent = ui.level })
 end
 
 local function buildMenu(gui, windows)
@@ -155,7 +157,7 @@ local function onImpact(_part, _speed, result)
 	entry.Parent = ui.feed
 	UiKit.pop(entry)
 	task.delay(FEED_LIFETIME, function()
-		TweenService:Create(entry, FADE, { BackgroundTransparency = 1 }):Play()
+		TweenService:Create(entry, FADE, { ImageTransparency = 1 }):Play()
 		TweenService:Create(label, FADE, { TextTransparency = 1 }):Play()
 		task.wait(FADE.Time)
 		entry:Destroy()

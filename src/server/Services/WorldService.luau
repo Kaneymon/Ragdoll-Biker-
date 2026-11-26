@@ -5,7 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Maps = require(Shared.Config.Maps)
 local Bike = require(Shared.Config.Bike)
-local Progression = require(Shared.Logic.Progression)
+local MapGeometry = require(Shared.Logic.MapGeometry)
 local Localize = require(Shared.Services.Localize)
 local MapBuilder = require(script.Parent.Parent.World.MapBuilder)
 
@@ -41,9 +41,8 @@ local function buildMaps()
 end
 
 function WorldService.spawnCFrame(mapId, rampLevel, slot)
-	local def = Progression.map(mapId) or Progression.map(Maps.default)
 	local side = ((slot % 3) - 1) * SPAWN_SPREAD
-	return MapBuilder.spawnCFrame(def, Progression.rampStart(rampLevel), Bike.Hover, side)
+	return MapGeometry.spawnCFrame(MapGeometry.def(mapId), rampLevel, Bike.Hover, side)
 end
 
 function WorldService.start()

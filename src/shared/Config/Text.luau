@@ -135,6 +135,8 @@ local Text = {
 
 	-- Payout sheet
 	PAY_TITLE = "INSURANCE PAYOUT",
+	PAY_FORM = "Patient claim form",
+	PAY_HITS = "Bumps and bashes",
 	PAY_BONES = "Bones hurt: {1} / {2}",
 	PAY_INJURIES = "Injuries",
 	PAY_NONE = "Not a scratch!",

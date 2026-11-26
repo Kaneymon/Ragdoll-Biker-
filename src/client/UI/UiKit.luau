@@ -6,6 +6,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Theme = require(Shared.Config.Theme)
+local Assets = require(Shared.Config.UiAssets)
 local P = require(Shared.Config.Palette)
 local Localize = require(Shared.Services.Localize)
 local Sfx = require(Shared.Services.Sfx)
@@ -83,17 +84,63 @@ function UiKit.screen(name: string, order: number?)
 	return gui
 end
 
--- Rounded, outlined panel.
+-- 9-slice image setup. cornerPx = how big the rounded corners should look on screen.
+local function sliced(image, asset, cornerPx)
+	image.BackgroundTransparency = 1
+	image.ScaleType = Enum.ScaleType.Slice
+	image.SliceCenter = asset.slice
+	image.SliceScale = cornerPx / asset.radius
+end
+
+-- Panel from the GUI pack's rounded box, tinted with BackgroundColor3 (default: panel white).
 function UiKit.panel(props)
+	local box = Instance.new("ImageLabel")
+	box.Image = Assets.Box.image
+	sliced(box, Assets.Box, props.cornerPx or Theme.PanelCorner)
+	box.ImageColor3 = props.BackgroundColor3 or P.Panel
+	props.BackgroundColor3, props.corner, props.stroke, props.cornerPx = nil, nil, nil, nil
+	return apply(box, props)
+end
+
+-- Plain rounded, outlined shape (for drawings such as the skeleton and bars).
+function UiKit.shape(props)
 	local frame = Instance.new("Frame")
 	frame.BackgroundColor3 = P.Panel
 	frame.BorderSizePixel = 0
 	UiKit.corner(frame, props.corner)
 	if props.stroke ~= false then
-		UiKit.stroke(frame)
+		UiKit.stroke(frame, nil, props.strokeThickness)
 	end
-	props.corner, props.stroke = nil, nil
+	props.corner, props.stroke, props.strokeThickness = nil, nil, nil
 	return apply(frame, props)
+end
+
+-- An icon from the GUI pack (Config/UiAssets.Icons).
+function UiKit.icon(name, props)
+	local icon = Instance.new("ImageLabel")
+	icon.BackgroundTransparency = 1
+	icon.Image = Assets.Icons[name]
+	icon.ScaleType = Enum.ScaleType.Fit
+	return apply(icon, props)
+end
+
+-- Ready-made pill colours from the pack; any other colour tints the white pill.
+local PILLS = { [P.Money] = "green", [P.Grass] = "green", [P.Sky] = "blue", [P.Orange] = "orange", [P.Sun] = "orange", [P.Disabled] = "grey" }
+
+local buttonColours = setmetatable({}, { __mode = "k" })
+
+local function setPillColour(button, color)
+	local ready = PILLS[color]
+	button.Image = if ready then Assets.Pills[ready] else Assets.Pill.image
+	button.ImageColor3 = if ready then P.White else color
+end
+
+-- Change a button's colour (keeps the grey "disabled" look working).
+function UiKit.recolour(button, color)
+	buttonColours[button] = color
+	if not button:GetAttribute("Disabled") then
+		setPillColour(button, color)
+	end
 end
 
 local function styleText(label, style, color)
@@ -122,28 +169,26 @@ function UiKit.label(props)
 end
 
 function UiKit.setText(label, key, ...)
-	label.Text = Localize.get(key, ...)
+	local target = if label:IsA("ImageButton") then label:FindFirstChild("Label") else label
+	target.Text = Localize.get(key, ...)
 end
 
 -- Chunky button. props.key/args/text, props.color, props.onClick, props.style.
 -- Returns the button; button:SetAttribute("Disabled", true) greys it out.
 function UiKit.button(props)
-	local button = Instance.new("TextButton")
-	styleText(button, props.style or "Heading", P.White)
-	button.BackgroundTransparency = 0
+	local button = Instance.new("ImageButton")
 	button.AutoButtonColor = false
-	button.BorderSizePixel = 0
-	local color = props.color or P.Sky
-	button.BackgroundColor3 = color
-	button.Text = if props.key then Localize.get(props.key, table.unpack(props.args or {})) else (props.text or "")
+	buttonColours[button] = props.color or P.Sky
+	setPillColour(button, buttonColours[button])
 	button.Size = UDim2.new(1, 0, 0, Theme.ButtonHeight)
-	UiKit.corner(button)
-	UiKit.stroke(button)
-	local textStroke = Instance.new("UIStroke")
-	textStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
-	textStroke.Color = P.Ink
-	textStroke.Thickness = 2
-	textStroke.Parent = button
+	local label = UiKit.label({
+		key = props.key, args = props.args, text = props.text, style = props.style or "Heading", color = P.White, outline = true,
+		Name = "Label", Size = UDim2.new(1, -24, 1, -6), Position = UDim2.fromOffset(12, 0), Parent = button,
+	})
+	label.TextScaled = true
+	local limit = Instance.new("UITextSizeConstraint")
+	limit.MaxTextSize = Theme.TextSize[props.style or "Heading"]
+	limit.Parent = label
 	local scale = Instance.new("UIScale")
 	scale.Parent = button
 
@@ -163,9 +208,29 @@ function UiKit.button(props)
 		end
 	end)
 	button:GetAttributeChangedSignal("Disabled"):Connect(function()
-		button.BackgroundColor3 = if button:GetAttribute("Disabled") then P.Disabled else color
+		setPillColour(button, if button:GetAttribute("Disabled") then P.Disabled else buttonColours[button])
 	end)
 	props.key, props.args, props.text, props.color, props.onClick, props.style = nil, nil, nil, nil, nil, nil
+	apply(button, props)
+	local height = if button.Size.Y.Offset > 0 then button.Size.Y.Offset else Theme.TabHeight
+	sliced(button, Assets.Pill, height / 2)
+	return button
+end
+
+-- Round red close button with a cross (from the GUI pack). props: Position, AnchorPoint, Parent, onClick.
+function UiKit.closeButton(props)
+	local button = Instance.new("ImageButton")
+	button.BackgroundTransparency = 1
+	button.Image = Assets.Icons.closeCircle
+	button.Size = UDim2.fromOffset(62, 62)
+	button.ZIndex = 4
+	UiKit.icon("cross", { Size = UDim2.fromScale(0.55, 0.55), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 5, Parent = button })
+	local onClick = props.onClick
+	button.Activated:Connect(function()
+		Sfx.play("Click")
+		onClick()
+	end)
+	props.onClick = nil
 	return apply(button, props)
 end
 
@@ -195,8 +260,8 @@ end
 
 -- Progress bar. Returns frame and a setter (0..1).
 function UiKit.bar(props)
-	local frame = UiKit.panel({ Size = props.Size, Position = props.Position, AnchorPoint = props.AnchorPoint, BackgroundColor3 = P.Ink, Parent = props.Parent, corner = Theme.SmallCorner })
-	local fill = UiKit.panel({ Size = UDim2.fromScale(1, 1), BackgroundColor3 = props.color or P.Sun, stroke = false, corner = Theme.SmallCorner, Parent = frame })
+	local frame = UiKit.shape({ Size = props.Size, Position = props.Position, AnchorPoint = props.AnchorPoint, BackgroundColor3 = P.Ink, Parent = props.Parent, corner = Theme.SmallCorner })
+	local fill = UiKit.shape({ Size = UDim2.fromScale(1, 1), BackgroundColor3 = props.color or P.Sun, stroke = false, corner = Theme.SmallCorner, Parent = frame })
 	return frame, function(fraction)
 		fill.Size = UDim2.fromScale(math.clamp(fraction, 0, 1), 1)
 		fill.Visible = fraction > 0.001

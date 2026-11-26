@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Bike = require(Shared.Config.Bike)
 local Ragdoll = require(Shared.Logic.Ragdoll)
+local MapGeometry = require(Shared.Logic.MapGeometry)
 local RiderPose = require(Shared.Logic.RiderPose)
 local Net = require(Shared.Net)
 local State = require(script.Parent.Parent.State)
@@ -14,7 +15,9 @@ local BikeController = require(script.Parent.BikeController)
 
 local RagdollController = {}
 
-local active = nil -- { character, core, rest, time }
+local active = nil -- { character, core, rest, time, floorY }
+local groundParams = RaycastParams.new()
+groundParams.FilterType = Enum.RaycastFilterType.Include
 
 local function flat(v)
 	local f = Vector3.new(v.X, 0, v.Z)
@@ -53,7 +56,8 @@ function RagdollController.bail(reason: string, extraVelocity: Vector3?)
 	end
 	Ragdoll.setVelocity(character, bailVelocity(ride) + (extraVelocity or Vector3.zero))
 
-	active = { character = character, core = Ragdoll.core(character), rest = 0, time = 0 }
+	local floorY = MapGeometry.floorY(MapGeometry.def(State.profile.maps.selected))
+	active = { character = character, core = Ragdoll.core(character), rest = 0, time = 0, floorY = floorY }
 	State.setPhase("Ragdoll")
 	Players.LocalPlayer:SetAttribute("BailReason", reason)
 	State.Bailed:Fire(reason)
@@ -70,6 +74,16 @@ local function finish()
 	Net.event("RunFinished"):FireServer()
 end
 
+-- How much steering you get right now: grows with speed up to Glide.FullSpeed, and is much
+-- weaker while the body is touching the ground.
+local function controlShare()
+	local g = Bike.Glide
+	local speedShare = math.clamp(active.core.AssemblyLinearVelocity.Magnitude / g.FullSpeed, g.MinShare, 1)
+	groundParams.FilterDescendantsInstances = { workspace:FindFirstChild("World") }
+	local onGround = workspace:Raycast(active.core.Position, Vector3.new(0, -g.GroundReach, 0), groundParams) ~= nil
+	return speedShare * (if onGround then g.GroundShare else 1)
+end
+
 -- Camera-relative steering: WASD pushes the body and makes it tumble/flail in that direction
 -- (W/S flips forwards/backwards, A/D cartwheels). Strength scales with the Helmet upgrade.
 local function glide(dt)
@@ -79,7 +93,7 @@ local function glide(dt)
 	end
 	local camera = workspace.CurrentCamera.CFrame
 	local look, right = flat(camera.LookVector), flat(camera.RightVector)
-	local control = State.stats.glideControl
+	local control = State.stats.glideControl * controlShare()
 	local direction = look * -move.Z + right * move.X
 	if direction.Magnitude > 0 then
 		Ragdoll.addVelocity(active.character, direction.Unit * Bike.Glide.Accel * control * dt)
@@ -99,7 +113,7 @@ local function step(dt)
 	State.run.maxSpeed = math.max(State.run.maxSpeed, speed)
 	active.time += dt
 	active.rest = if speed < Bike.Rest.Speed then active.rest + dt else 0
-	if active.rest >= Bike.Rest.Time or active.time >= Bike.Rest.MaxTime or active.core.Position.Y < Bike.Rest.KillY then
+	if active.rest >= Bike.Rest.Time or active.time >= Bike.Rest.MaxTime or active.core.Position.Y < active.floorY - Bike.Rest.FallBelowMap then
 		finish()
 	end
 end

@@ -68,6 +68,7 @@ local function buildSheet(player, run)
 		bones = run.report.bones,
 		injuries = injuries,
 		bill = summary.bill,
+		impactMoney = summary.impactMoney,
 		multiplier = multiplier,
 		mapMult = map.payoutMult,
 		total = math.min(summary.total, Economy.MaxPayoutPerRun),

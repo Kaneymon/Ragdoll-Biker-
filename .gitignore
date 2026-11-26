@@ -2,3 +2,4 @@
 *.rbxlx.lock
 sourcemap.json
 __pycache__/
+assets/GUI/Basic_GUI_Bundle/

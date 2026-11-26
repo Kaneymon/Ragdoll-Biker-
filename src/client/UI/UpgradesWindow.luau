@@ -6,6 +6,7 @@ local P = require(Shared.Config.Palette)
 local Maps = require(Shared.Config.Maps)
 local Ramp = require(Shared.Config.Ramp)
 local Progression = require(Shared.Logic.Progression)
+local MapGeometry = require(Shared.Logic.MapGeometry)
 local Format = require(Shared.Util.Format)
 local Net = require(Shared.Net)
 local State = require(script.Parent.Parent.State)
@@ -81,12 +82,13 @@ end
 function renderers.ramp(window)
 	local level = State.profile.rampLevel
 	local nextLevel = math.min(level + 1, Ramp.maxLevel)
+	local map = MapGeometry.def(State.profile.maps.selected)
 	Card.new(window.body, {
 		title = { "RAMP_NAME" },
 		lines = {
 			{ "RAMP_DESC" },
 			{ "UPG_LEVEL", { level, Ramp.maxLevel } },
-			{ "UPG_STAT", { Format.number(Progression.rampStart(level)), Format.number(Progression.rampStart(nextLevel)) } },
+			{ "UPG_STAT", { Format.number(MapGeometry.startDistance(map, level)), Format.number(MapGeometry.startDistance(map, nextLevel)) } },
 		},
 		buttons = { moneyButton(Progression.rampCost(level), function()
 			buy("ramp")
@@ -161,7 +163,7 @@ renderers.exploders = renderGear("exploders")
 function UpgradesWindow.create()
 	local window = Window.new({
 		titleKey = "WIN_UPGRADES",
-		color = P.Sun,
+		banner = "orange",
 		tabs = TABS,
 		render = function(window, tab)
 			renderers[tab](window)

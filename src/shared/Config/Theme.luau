@@ -11,6 +11,8 @@ return {
 	Padding = 14,
 	ButtonHeight = 64,
 	CardHeight = 130,
+	TabHeight = 54,
+	PanelCorner = 18, -- on-screen corner size of image panels
 	WindowSize = UDim2.new(0.62, 0, 0.8, 0),
 	WindowMax = Vector2.new(760, 720),
 	DesignHeight = 900, -- screen height the pixel sizes are designed for

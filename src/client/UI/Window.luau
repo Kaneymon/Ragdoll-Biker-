@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Theme = require(Shared.Config.Theme)
 local P = require(Shared.Config.Palette)
+local Assets = require(Shared.Config.UiAssets)
 local UiKit = require(script.Parent.UiKit)
 
 local Window = {}
@@ -20,7 +21,7 @@ local function screen()
 	return gui
 end
 
--- options: titleKey, color, tabs = { { id, key } }, render(window, tabId)
+-- options: titleKey, banner (UiAssets.Banners colour), tabs = { { id, key } }, render(window, tabId)
 function Window.new(options)
 	local self = setmetatable({ options = options, tab = options.tabs and options.tabs[1].id, tabButtons = {} }, Window)
 	local root = UiKit.panel({ Name = options.titleKey, Size = Theme.WindowSize, Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), Visible = false, Parent = screen() })
@@ -29,9 +30,18 @@ function Window.new(options)
 	limit.Parent = root
 	self.root = root
 
-	local header = UiKit.panel({ Size = UDim2.new(1, 0, 0, TITLE_HEIGHT), BackgroundColor3 = options.color or P.Sky, Parent = root })
-	UiKit.label({ key = options.titleKey, style = "Title", color = P.White, outline = true, Size = UDim2.new(1, -90, 1, 0), Position = UDim2.fromOffset(20, 0), TextXAlignment = Enum.TextXAlignment.Left, Parent = header })
-	UiKit.button({ key = "BTN_CLOSE", color = P.Coral, Size = UDim2.fromOffset(56, 56), Position = UDim2.new(1, -8, 0.5, 0), AnchorPoint = Vector2.new(1, 0.5), Parent = header, onClick = function()
+	-- curved banner from the GUI pack, sitting over the top edge of the window
+	local header = Instance.new("ImageLabel")
+	header.BackgroundTransparency = 1
+	header.Image = Assets.Banners[options.banner or "blue"]
+	header.Size = UDim2.new(0.8, 0, 0, TITLE_HEIGHT + 20)
+	header.Position = UDim2.new(0.5, 0, 0, -26)
+	header.AnchorPoint = Vector2.new(0.5, 0)
+	header.ZIndex = 2
+	header.Parent = root
+	local title = UiKit.label({ key = options.titleKey, style = "Title", color = P.White, outline = true, Size = UDim2.new(1, -40, 0.7, 0), Position = UDim2.fromScale(0.5, 0.42), AnchorPoint = Vector2.new(0.5, 0.5), Parent = header })
+	title.ZIndex = 3
+	UiKit.closeButton({ Position = UDim2.new(1, 14, 0, -14), AnchorPoint = Vector2.new(1, 0), Parent = root, onClick = function()
 		self:close()
 	end })
 
@@ -45,7 +55,7 @@ function Window.new(options)
 		local layout = UiKit.listLayout(row, Enum.FillDirection.Horizontal, 8)
 		layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 		for i, tab in options.tabs do
-			self.tabButtons[tab.id] = UiKit.button({ key = tab.key, style = "Body", color = P.Grape, LayoutOrder = i, Size = UDim2.new(1 / #options.tabs, -8, 1, 0), Parent = row, onClick = function()
+			self.tabButtons[tab.id] = UiKit.button({ key = tab.key, style = "Body", color = P.Sky, LayoutOrder = i, Size = UDim2.new(1 / #options.tabs, -8, 1, 0), Parent = row, onClick = function()
 				self:select(tab.id)
 			end })
 		end
@@ -59,7 +69,7 @@ end
 function Window:select(tabId)
 	self.tab = tabId
 	for id, button in self.tabButtons do
-		button.BackgroundColor3 = if id == tabId then P.Sun else P.Grape
+		UiKit.recolour(button, if id == tabId then P.Sun else P.Sky)
 	end
 	self:refresh()
 end

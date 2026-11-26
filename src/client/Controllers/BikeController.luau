@@ -94,11 +94,14 @@ local function stepAir(dt)
 end
 
 -- Ground step ---------------------------------------------------------------
-local function leaveGround(popNormal)
+-- popNormal = push off this way (hop or kicker). Kicker launches also grow with entry speed,
+-- so faster runs fly much higher.
+local function leaveGround(popNormal, fromKicker)
 	ride.align.Enabled = false
 	ride.grace = Bike.LeaveGroundGrace
 	if popNormal then
-		ride.chassis.AssemblyLinearVelocity += popNormal * State.stats.jumpHeight
+		local pop = State.stats.jumpHeight + (if fromKicker then ride.speed * Bike.LaunchPopPerSpeed else 0)
+		ride.chassis.AssemblyLinearVelocity += popNormal * pop
 	end
 	State.setPhase("Air")
 	State.Launched:Fire()
@@ -128,7 +131,8 @@ end
 local function stepGround(dt)
 	local hit = cast(-ride.chassis.CFrame.UpVector, Bike.RayLength)
 	if not hit or hit.Distance > Bike.Hover + LEAVE_MARGIN then
-		leaveGround(if ride.groundPart and ride.groundPart:GetAttribute("Launch") then ride.normal else nil)
+		local kicker = ride.groundPart and ride.groundPart:GetAttribute("Launch")
+		leaveGround(if kicker then ride.normal else nil, kicker)
 		return
 	end
 	local n = hit.Normal

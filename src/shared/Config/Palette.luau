@@ -23,4 +23,9 @@ return {
 	Stone = Color3.fromRGB(160, 165, 175),
 	Metal = Color3.fromRGB(120, 130, 150),
 	Rubber = Color3.fromRGB(40, 40, 48),
+	Concrete = Color3.fromRGB(205, 208, 215),
+	Asphalt = Color3.fromRGB(70, 74, 86),
+	Snow = Color3.fromRGB(240, 246, 255),
+	SpaceFloor = Color3.fromRGB(60, 50, 95),
+	Paper = Color3.fromRGB(255, 251, 236),
 }

@@ -24,6 +24,29 @@ function Build.part(props, className: string?)
 	return part
 end
 
+-- Parts can't be bigger than 2048 studs on any side, so big boxes are split into tiles
+-- (along the box's own axes) that together fill the same space.
+local MAX_TILE = 2000
+
+function Build.tiled(props, className: string?)
+	local size, cf = props.Size, props.CFrame
+	local counts = Vector3.new(math.ceil(size.X / MAX_TILE), math.ceil(size.Y / MAX_TILE), math.ceil(size.Z / MAX_TILE))
+	local tile = size / counts
+	local parts = {}
+	for i = 1, counts.X do
+		for j = 1, counts.Y do
+			for k = 1, counts.Z do
+				local offset = Vector3.new((i - 0.5) * tile.X, (j - 0.5) * tile.Y, (k - 0.5) * tile.Z) - size / 2
+				local tileProps = table.clone(props)
+				tileProps.Size = tile
+				tileProps.CFrame = cf * CFrame.new(offset)
+				table.insert(parts, Build.part(tileProps, className))
+			end
+		end
+	end
+	return parts
+end
+
 -- Decoration that never blocks rays or bodies.
 function Build.decor(props, className: string?)
 	local part = Build.part(props, className)

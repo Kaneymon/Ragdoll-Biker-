@@ -35,7 +35,7 @@ function Skeleton.new(parent, props)
 	local shapes = {}
 	for _, group in Bones.Groups do
 		local x, y, w, h, rotation = table.unpack(group.ui)
-		local shape = UiKit.panel({
+		local shape = UiKit.shape({
 			Name = group.id,
 			Size = UDim2.fromScale(w, h),
 			Position = UDim2.fromScale(x, y),
@@ -43,9 +43,9 @@ function Skeleton.new(parent, props)
 			Rotation = rotation,
 			BackgroundColor3 = P.Bone,
 			corner = if group.round then UDim.new(0.5, 0) else UDim.new(0, 8),
+			strokeThickness = 2,
 			Parent = figure,
 		})
-		shape:FindFirstChildOfClass("UIStroke").Thickness = 2
 		shapes[group.id] = shape
 	end
 

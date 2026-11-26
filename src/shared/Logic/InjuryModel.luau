@@ -131,6 +131,7 @@ function InjuryModel.summary(report, multiplier, mapMult)
 	local bill = math.floor(report.impactMoney + boneMoney + injuryMoney)
 	return {
 		bill = bill,
+		impactMoney = math.floor(report.impactMoney),
 		total = math.floor(bill * multiplier * mapMult),
 		bonesHurt = hurt,
 		statuses = statuses,

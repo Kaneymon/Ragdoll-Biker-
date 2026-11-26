@@ -97,7 +97,7 @@ end
 function SettingsWindow.create()
 	local window = Window.new({
 		titleKey = "WIN_SETTINGS",
-		color = P.Sky,
+		banner = "blue",
 		tabs = TABS,
 		render = function(window, tab)
 			renderers[tab](window)

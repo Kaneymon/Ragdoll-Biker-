@@ -17,7 +17,7 @@ local LINE_HEIGHT = 30
 -- }
 function Card.new(parent, spec)
 	local buttonCount = spec.buttons and #spec.buttons or 0
-	local height = math.max(Theme.CardHeight, 66 + #(spec.lines or {}) * LINE_HEIGHT, buttonCount * (Theme.ButtonHeight + 8) + 16)
+	local height = math.max(Theme.CardHeight, 80 + #(spec.lines or {}) * LINE_HEIGHT, buttonCount * (Theme.ButtonHeight + 8) + 16)
 	local card = UiKit.panel({ Size = UDim2.new(1, 0, 0, height), BackgroundColor3 = spec.color or P.Card, LayoutOrder = spec.order or 0, Parent = parent })
 	UiKit.padding(card, 12)
 

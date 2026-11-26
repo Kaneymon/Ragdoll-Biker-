@@ -63,10 +63,6 @@ function Progression.stats(profile)
 end
 
 -- Ramp ---------------------------------------------------------------------
-function Progression.rampStart(level)
-	return Ramp.startBase + Ramp.startPerLevel * math.clamp(level, 0, Ramp.maxLevel)
-end
-
 function Progression.rampCost(level)
 	if level >= Ramp.maxLevel then
 		return nil

@@ -25,7 +25,7 @@ end
 function StoreWindow.create()
 	return Window.new({
 		titleKey = "WIN_STORE",
-		color = P.Grape,
+		banner = "green",
 		tabs = tabs,
 		render = function(window, tabId)
 			for i, item in byTab[tabId].items do

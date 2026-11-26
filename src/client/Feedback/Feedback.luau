@@ -12,6 +12,7 @@ local CameraController = require(script.Parent.Parent.Controllers.CameraControll
 local Feedback = {}
 
 local GROAN_CHANCE = 0.35
+local NOTICE_SOUNDS = { NOTE_BOUGHT = "Purchase", NOTE_NO_MONEY = "Error", NOTE_MAX = "Error", NOTE_ERROR = "Error" }
 local wind = nil
 local boost = { sound = nil, flame = nil }
 
@@ -107,6 +108,12 @@ function Feedback.start()
 	end)
 	State.CashedOut:Connect(function()
 		Sfx.play("CashOut")
+	end)
+	State.Notify:Connect(function(key)
+		local sound = NOTICE_SOUNDS[key]
+		if sound then
+			Sfx.play(sound)
+		end
 	end)
 end
 
