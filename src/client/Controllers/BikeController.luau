@@ -201,9 +201,17 @@ local function onHop(name)
 end
 
 -- Public --------------------------------------------------------------------
-function BikeController.attach(bike: Model)
-	local chassis = bike:WaitForChild("Chassis")
-	local frameRoot = bike:WaitForChild("FrameRoot")
+local PART_TIMEOUT = 10
+
+-- Start driving a bike. isCurrent() says whether this bike still belongs to the live character:
+-- quick respawns (several purchases in a row) replace bikes while older calls are still waiting.
+-- Returns false when the bike went away or is no longer wanted.
+function BikeController.attach(bike: Model, isCurrent: () -> boolean): boolean
+	local chassis = bike:WaitForChild("Chassis", PART_TIMEOUT)
+	local frameRoot = bike:WaitForChild("FrameRoot", PART_TIMEOUT)
+	if not (chassis and frameRoot and bike.Parent and isCurrent()) then
+		return false
+	end
 	rayParams.FilterDescendantsInstances = { workspace:WaitForChild("World") }
 	ride = {
 		bike = bike,
@@ -228,6 +236,7 @@ function BikeController.attach(bike: Model)
 	ride.align.CFrame = chassis.CFrame.Rotation
 	ride.align.Enabled = true
 	State.setPhase("Ready")
+	return true
 end
 
 -- Stop driving the bike (bail). Returns the old context so the rider can inherit its motion.

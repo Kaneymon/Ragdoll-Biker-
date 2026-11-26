@@ -50,7 +50,8 @@ local function mount(player, character)
 	local profile = DataService.waitFor(player)
 	local humanoid = character:WaitForChild("Humanoid")
 	local root = character:WaitForChild("HumanoidRootPart")
-	if not profile or not character.Parent then
+	-- Quick respawns: a newer character may have spawned while this one waited; leave its bike alone.
+	if not profile or not character.Parent or player.Character ~= character then
 		return
 	end
 	humanoid.BreakJointsOnDeath = false

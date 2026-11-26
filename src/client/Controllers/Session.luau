@@ -32,14 +32,18 @@ local function onCharacter(character)
 	State.setPhase("Loading")
 	State.character = character
 	State.resetRun()
+	local function isCurrent()
+		return State.character == character and character.Parent ~= nil
+	end
 	local link = character:WaitForChild("Bike", 30)
 	local bike = link and (link.Value or link.Changed:Wait() and link.Value)
-	if not bike or State.character ~= character then
+	if not bike or not isCurrent() then
 		return
 	end
 	stopAnimations(character)
-	BikeController.attach(bike)
-	RiderPose.track(character, bike.Chassis:FindFirstChild("RiderWeld"), "Ride")
+	if BikeController.attach(bike, isCurrent) then
+		RiderPose.track(character, bike.Chassis:FindFirstChild("RiderWeld"), "Ride")
+	end
 end
 
 -- Ask the server to pay out; returns success.

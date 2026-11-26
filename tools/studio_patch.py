@@ -103,7 +103,7 @@ def main():
     outdir = sys.argv[1] if len(sys.argv) > 1 else "."
     changed = ["   " + f for f in subprocess.run(["git", "diff", "--name-only", BASE, "--", "src"], capture_output=True, text=True).stdout.splitlines()]
     changed += subprocess.run(["git", "status", "--porcelain", "--untracked-files=all", "--", "src"], capture_output=True, text=True).stdout.splitlines()
-    changed = list(dict.fromkeys(changed))
+    changed = list(dict.fromkeys("   " + line[3:].strip().strip('"') for line in changed))
     stmts = []
     for line in changed:
         rel = line[3:].strip().strip('"')
