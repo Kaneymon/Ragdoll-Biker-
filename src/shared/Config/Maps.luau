@@ -6,8 +6,8 @@
 -- propAreas = where across the slope a prop may go: { from, to } studs from the centre line
 --   (either side); anything not listed can go anywhere.
 -- street = draw a road down the middle, pavements either side and houses along the outside.
--- path = a brick-lined path winding down the landing slope (amplitude/wavelength in studs);
---   props keep clear of it.
+-- path = a brick-lined path winding down the landing slope (amplitude/wavelength in studs),
+--   starting `start` studs down it; props keep clear of it.
 -- hillTrees = prop keys planted along both sides of the mega ramp.
 -- Prop keys: the part-built props in World/Props and the textured meshes in Config/MeshProps.
 local P = require(script.Parent.Palette)
@@ -37,7 +37,7 @@ return {
 				picnicTables = 4, parkLamps = 6, swings = 2, jungleGyms = 2,
 			},
 			hillTrees = { "oakTrees", "firTrees" },
-			path = { width = 16, amplitude = 110, wavelength = 520, segment = 16, brick = 1.4 },
+			path = { start = 40, width = 16, amplitude = 110, wavelength = 520, segment = 16, brick = 1.4 },
 		},
 		{
 			id = "skate_park", nameKey = "MAP_SKATE_PARK", price = 75000, level = 12, payoutMult = 2,

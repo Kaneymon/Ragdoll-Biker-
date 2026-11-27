@@ -44,6 +44,7 @@ for key, def in MeshProps.list do -- textured Blender props
 	end, upright = def.upright }
 end
 local PATH_CLEARANCE = 8 -- props keep this far from the path's edge
+local FOOTPRINT_SHARE = 0.75 -- how much of a prop's width counts when keeping props apart
 
 -- Fills the space under a straight line from (zA, yA) down to (zB, yB) with wedges on top and
 -- boxes below, down to floorY. Split so no piece is too big.
@@ -266,9 +267,11 @@ local function buildPath(def, g, model)
 		local frame = CFrame.fromMatrix((a + b) / 2, g.landNormal:Cross((b - a).Unit).Unit, g.landNormal)
 		Build.decor({ Name = name, Size = Vector3.new(width, height, length + width * 0.6), CFrame = frame * CFrame.new(0, height / 2, 0), Color = color, Material = material, Parent = folder })
 	end
-	local steps = math.floor(def.landing.length / path.segment)
+	-- start a little way down the slope: right at the top the slope meets the flat ground, and a
+	-- tilted strip there would stick up out of it
+	local steps = math.floor((def.landing.length - path.start) / path.segment)
 	for i = 0, steps - 1 do
-		local a, b = i * path.segment, (i + 1) * path.segment
+		local a, b = path.start + i * path.segment, path.start + (i + 1) * path.segment
 		strip("PathStone", point(a, 0), point(b, 0), path.width, 0.3, P.PathStone, Enum.Material.Pebble)
 		for _, side in { -1, 1 } do
 			strip("Bricks", point(a, side), point(b, side), path.brick, path.brick * 0.6, P.Brick, Enum.Material.Brick)
@@ -281,11 +284,28 @@ local function nearPath(def, along, x)
 		and math.abs(x - pathX(def.path, along)) < def.path.width / 2 + PATH_CLEARANCE
 end
 
+-- Footprints of props already placed (x across the slope, distance down it, radius), so new ones
+-- don't grow through each other.
+local function overlaps(placed, x, along, radius)
+	for _, spot in placed do
+		if (spot.x - x) ^ 2 + (spot.along - along) ^ 2 < (spot.radius + radius) ^ 2 then
+			return true
+		end
+	end
+	return false
+end
+
+local function footprint(prop)
+	local size = prop:GetExtentsSize()
+	return math.max(size.X, size.Z) / 2 * FOOTPRINT_SHARE
+end
+
 local function placeProps(def, g, model)
 	local rng = Random.new(def.seed)
 	local folder = Build.model("Props", model)
 	local half = def.landing.width / 2 - 25
 	local perThousand = def.landing.length / 1000
+	local placed = {}
 	for key, density in def.props do
 		local builder = PROP_BUILDERS[key]
 		local area = def.propAreas and def.propAreas[key]
@@ -305,6 +325,12 @@ local function placeProps(def, g, model)
 			local normal = if onSlope and not builder.upright then g.landNormal else Vector3.yAxis
 			local turn = if builder.facing then 0 else rng:NextNumber(0, math.pi * 2)
 			local prop = builder.build(rng, def.theme)
+			local radius = footprint(prop)
+			if overlaps(placed, x, along, radius) then
+				prop:Destroy()
+				continue
+			end
+			table.insert(placed, { x = x, along = along, radius = radius })
 			prop:PivotTo(Build.onSurface(position, normal) * CFrame.Angles(0, turn, 0))
 			prop.Parent = folder
 		end

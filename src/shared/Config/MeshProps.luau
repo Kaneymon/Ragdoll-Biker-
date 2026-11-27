@@ -1,4 +1,5 @@
--- Textured low-poly props modelled in Blender (tools/park_props_blender.py) and kept as Models in
+-- Textured low-poly props modelled and baked in Blender (tools/park_props_blender.py; texture ids in
+-- assets/models/park/README.md) and kept as Models in
 -- ServerStorage.Assets.<folder>. Keys are the prop names used in Config/Maps `props`.
 -- mesh = model name; scale = { min, max } random size; upright = stands straight up on slopes
 -- (else tilts with the ground); collide = solid for bikes and ragdolls.
