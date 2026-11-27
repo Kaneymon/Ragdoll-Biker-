@@ -244,7 +244,6 @@ local Text = {
 	LOBBY_TITLE = "RAGDOLL BIKER",
 	LOBBY_SUBTITLE = "Press PLAY to hit the mega ramp!",
 	PROMPT_SHOP = "Shop",
-	PROMPT_RIDE = "Ride",
 	SHOP_BIKES = "BIKES",
 	SHOP_TRAILS = "TRAILS",
 	SHOP_BIKE_UPGRADES = "BIKE UPGRADES",
@@ -256,7 +255,7 @@ local Text = {
 	AFK_SUBTITLE = "Chill here and earn cash every minute",
 	NOTE_AFK_PAID = "AFK bonus: {1}",
 	OBBY_TITLE = "OBBY",
-	OBBY_SUBTITLE = "Ride it to the end! No boosts, no bailing.",
+	OBBY_SUBTITLE = "Ride off the edge here and make it to the end!",
 	OBBY_FINISH = "FINISH!",
 	NOTE_OBBY_DONE = "Obby complete! +{1}",
 

@@ -12,7 +12,7 @@ local Tricks = require(Shared.Config.Tricks)
 local Location = require(Shared.Logic.Location)
 
 local State = {
-	-- Phases: Loading, Lobby (walking), Ready (on bike, not moving), Riding, Air, Ragdoll, Resting, Payout
+	-- Phases: Loading, Ready (on bike, not moving), Riding, Air, Ragdoll, Resting, Payout
 	phase = "Loading",
 	profile = nil,
 	stats = nil, -- all upgrade stats (bike + biker)

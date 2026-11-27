@@ -57,6 +57,8 @@ local function land(hit)
 		ride.speed = math.max(0, velocity:Dot(look.Unit))
 		ride.align.CFrame = CFrame.lookAt(Vector3.zero, look.Unit, n)
 		ride.align.Enabled = true
+		ride.bounce = 0
+		ride.bounceSpeed = math.min(-velocity:Dot(n) * Bike.LandBounce.share, Bike.LandBounce.max)
 		State.setPhase("Riding")
 		State.Landed:Fire(-velocity:Dot(n))
 	else
@@ -118,7 +120,17 @@ local function checkBlocked(forward, dt)
 	return ride.blocked >= 2
 end
 
+-- The suspension after a landing: a damped spring on the ride height.
+local function stepBounce(dt)
+	local spec = Bike.LandBounce
+	ride.bounceSpeed += (-spec.stiffness * ride.bounce - spec.damping * ride.bounceSpeed) * dt
+	ride.bounce += ride.bounceSpeed * dt
+end
+
 local function stepIdle(dt)
+	if not State.rules().bail then
+		return
+	end
 	if ride.speed < 2 then
 		ride.idle += dt
 	else
@@ -157,7 +169,8 @@ local function stepGround(dt)
 	accel += BikeController.boostAccel
 	ride.speed = math.clamp(ride.speed + accel * dt, 0, Bike.MaxSpeed * State.stats.speedMult)
 
-	ride.chassis.AssemblyLinearVelocity = forward * ride.speed + n * (Bike.Hover - hit.Distance) * Bike.Spring
+	stepBounce(dt)
+	ride.chassis.AssemblyLinearVelocity = forward * ride.speed + n * ((Bike.Hover + ride.bounce - hit.Distance) * Bike.Spring + ride.bounceSpeed)
 	ride.align.CFrame = CFrame.lookAt(Vector3.zero, forward, n)
 	stepIdle(dt)
 end
@@ -216,6 +229,8 @@ function BikeController.attach(bike: Model, isCurrent: () -> boolean): boolean
 	end
 	rayParams.FilterDescendantsInstances = Ground.instances()
 	ride = {
+		bounce = 0, -- landing suspension (stepBounce)
+		bounceSpeed = 0,
 		bike = bike,
 		chassis = chassis,
 		align = chassis:WaitForChild("Upright"),

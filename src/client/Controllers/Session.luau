@@ -33,12 +33,7 @@ local function onCharacter(character)
 	State.setPhase("Loading")
 	State.character = character
 	State.resetRun()
-	local riding = State.rules().riding
-	Input.setEnabled(riding)
-	if not riding then
-		State.setPhase("Lobby") -- walking round the lobby: the normal Roblox character and camera
-		return
-	end
+	Input.setEnabled(State.rules().tricks)
 	local function isCurrent()
 		return State.character == character and character.Parent ~= nil
 	end

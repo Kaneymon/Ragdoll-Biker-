@@ -18,7 +18,10 @@ return {
 	LaunchPopPerSpeed = 0.22, -- extra launch speed off a kicker per stud/s of entry speed
 	PedalGearRatio = 2.2, -- wheel turns per pedal turn (pedals only spin while pedalling)
 	PedalMaxSpin = 14, -- radians/sec cap so pedals stay readable at high speed
-	AutoBailIdle = 3, -- seconds stopped on the bike before auto-bail
+	AutoBailIdle = 3, -- seconds stopped on the bike before auto-bail (where bailing is allowed)
+	-- Landing bounce: the suspension springs (studs/s of landing speed -> bounce speed, capped),
+	-- as a damped spring on the ride height (stays well under the leave-ground margin).
+	LandBounce = { share = 0.05, max = 6, stiffness = 110, damping = 7 },
 	-- Ragdoll steering: Accel pushes you camera-relative, Spin tumbles you (both x control).
 	-- In the air, control = Helmet airControl, rising to full (1) as speed nears FullSpeed while
 	-- airControl is below 1 (Helmet level 20 = always full, like the original steering).

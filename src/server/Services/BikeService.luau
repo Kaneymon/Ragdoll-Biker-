@@ -1,4 +1,4 @@
--- Puts each fresh rider (on a ramp or the obby, Logic/Location) on a bike at their start, and
+-- Puts each fresh character on a bike at their start (lobby or ramp, Logic/Location), and
 -- takes them off it at bail. Also keeps riders from bumping into each other on the ramps: bikes
 -- and bodies are in the Riders collision group until they're past their map's kicker, then in
 -- the Slope group, where everyone collides (WorldService sets the groups up).
@@ -86,10 +86,7 @@ local function mount(player, character)
 		return
 	end
 	local rules = Location.rules(Location.of(player))
-	if not rules.riding then
-		return -- walking round the lobby
-	end
-	setGroup(player, WorldService.RIDERS_GROUP)
+	setGroup(player, if rules.bump then WorldService.SLOPE_GROUP else WorldService.RIDERS_GROUP)
 	humanoid.BreakJointsOnDeath = false
 	humanoid.RequiresNeck = false
 	Ragdoll.setup(character)

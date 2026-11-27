@@ -1,4 +1,5 @@
--- The lobby AFK corner (Config/Lobby.afk): players who stay on the rug get paid every interval.
+-- The lobby AFK corner (Config/Lobby.afk): players who stay on the rug (on or off their bike) get
+-- paid every interval.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

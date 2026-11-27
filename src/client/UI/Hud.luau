@@ -3,6 +3,7 @@
 -- Layout keeps clear of Roblox's own buttons (screens use CoreUISafeInsets) and of the
 -- phone thumbstick (bottom left) and jump/action buttons (bottom right): info sits along the top
 -- and right edge, menus on the left, prompts in the middle.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -35,6 +36,7 @@ local BAIL_LOOKAHEAD = 0.9
 local FADE = TweenInfo.new(0.4)
 local IN_RUN = { Riding = true, Air = true, Ragdoll = true }
 local PROMPT_ORDER = 30 -- the "press W to ride" prompt draws above menus and popups
+local LOBBY_MENU_PHASES = { Ready = true, Riding = true, Air = true } -- menu stays up riding round the lobby
 
 local ui = {}
 local rayParams = RaycastParams.new()
@@ -61,7 +63,7 @@ local function buildMenu(gui, windows)
 	ui.menu.Position = UDim2.fromOffset(16, 96)
 	ui.menu.Parent = gui
 	UiKit.listLayout(ui.menu, nil, 14, Enum.HorizontalAlignment.Left)
-	-- PLAY in the lobby takes you to your ramp; LOBBY on the ramp (or obby) takes you back
+	-- PLAY in the lobby takes you to your ramp; LOBBY on the ramp takes you back
 	ui.play = UiKit.button({ key = "BTN_PLAY", color = P.Money, style = "Title", Size = UDim2.fromOffset(280, 100), LayoutOrder = 0, Parent = ui.menu, onClick = function()
 		Session.travel(Location.RAMP)
 	end })
@@ -124,16 +126,17 @@ local function refreshProfile(profile)
 	ui.gear.Visible = State.rules().gear == true and (booster ~= nil or (Progression.equippedExploder(profile)) ~= nil)
 end
 
-local function refreshPhase(phase)
-	if phase == "Riding" then
+local function refreshPhase(phase, previous)
+	if phase == "Riding" and previous == "Ready" then
 		Window.closeAll() -- riding off closes any open menu
 	end
 	if State.profile then
 		refreshProfile(State.profile) -- what's shown can depend on where you are (gear on the obby)
 	end
-	ui.menu.Visible = phase == "Ready" or phase == "Lobby"
-	ui.play.Visible = phase == "Lobby"
-	ui.lobby.Visible = phase == "Ready"
+	local inLobby = State.location() == Location.LOBBY
+	ui.menu.Visible = phase == "Ready" or (inLobby and LOBBY_MENU_PHASES[phase] == true)
+	ui.play.Visible = inLobby
+	ui.lobby.Visible = not inLobby
 	ui.start.Visible = phase == "Ready"
 	ui.speed.Visible = IN_RUN[phase] == true
 	ui.mult.Visible = IN_RUN[phase] == true and #State.run.tricks > 0
@@ -258,6 +261,11 @@ function Hud.create(windows)
 
 	State.ProfileChanged:Connect(refreshProfile)
 	State.PhaseChanged:Connect(refreshPhase)
+	Players.LocalPlayer:GetAttributeChangedSignal(Location.ATTRIBUTE):Connect(function()
+		if State.location() == Location.LOBBY then
+			Window.closeAll() -- arriving in the lobby closes any open menu
+		end
+	end)
 	State.Trick:Connect(onTrick)
 	State.Impact:Connect(onImpact)
 	State.Notify:Connect(onNotify)

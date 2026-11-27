@@ -1,6 +1,6 @@
 -- One run per life: Riding -> Ragdoll -> Payout -> cash out (respawn).
 -- The server re-scores tricks and impacts itself; the client only reports what happened.
--- Rides that don't pay (the lobby obby, Logic/Location) end back in the lobby instead.
+-- Rides that don't pay (riding round the lobby, Logic/Location) end back in the lobby's middle.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

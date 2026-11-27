@@ -1,18 +1,16 @@
 -- Builds the Lobby from Config/Lobby: the floating chipboard deck with its rim, railings and
 -- underside, the title sign, the shop stalls, the leaderboards, the AFK corner and the obby course.
--- What other services need is left on the model: prompts carry Window/Tab (shops, client) or
--- Travel (the obby gate, server) attributes, boards carry Board, the AFK rug is named AfkZone,
--- and the model has ObbySpawn (CFrame), ObbyLowestY and ObbyFinish (the finish line part).
+-- What other services need is left on the model: shop prompts carry Window/Tab attributes
+-- (client), boards carry Board, the AFK rug is named AfkZone, and the model has ObbyLowestY and
+-- ObbyFinish (the finish line part).
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
 local Lobby = require(Shared.Config.Lobby)
-local Bike = require(Shared.Config.Bike)
 local P = require(Shared.Config.Palette)
 local Theme = require(Shared.Config.Theme)
 local MegaRamp = require(Shared.Config.MegaRamp)
-local Location = require(Shared.Logic.Location)
 local Localize = require(Shared.Services.Localize)
 local Build = require(script.Parent.Build)
 local RampKit = require(script.Parent.RampKit)
@@ -22,8 +20,8 @@ local LobbyBuilder = {}
 local RIM_PIECES = 72
 local CANVAS_WIDTH = 400 -- SurfaceGui pixels across a text panel (TextScaled tops out at 100px)
 local OBBY_KICKER_SEGMENTS = 8
-local OBBY_GATE_DISTANCE = 30 -- how far in from the edge the obby gate stands ...
-local OBBY_GATE_ANGLE = -14 -- ... and where, just beside the course
+local OBBY_SIGN_ANGLE = -14 -- the OBBY sign stands just beside where the course leaves the deck
+local OBBY_SIGN_DISTANCE = 21
 local SIDEWAYS = CFrame.Angles(0, 0, math.rad(90)) -- cylinders run along X; this stands them up
 
 local function asset(name)
@@ -254,17 +252,11 @@ local function buildObby(model)
 		end
 		lowest = math.min(lowest, p.Y)
 	end
-	local spawnAt = start + x * 15 + y * Bike.Hover
-	model:SetAttribute("ObbySpawn", CFrame.lookAt(spawnAt, spawnAt + x))
 	model:SetAttribute("ObbyLowestY", lowest)
-	-- the gate on the deck: walk up and ride
-	local gate = facingCentre(onDeck(OBBY_GATE_ANGLE, Lobby.radius - OBBY_GATE_DISTANCE))
-	board(folder, "ObbySign", gate * CFrame.new(0, 0, 9), 14, function(gui)
+	board(folder, "ObbySign", facingCentre(onDeck(OBBY_SIGN_ANGLE, Lobby.radius - OBBY_SIGN_DISTANCE)), 14, function(gui)
 		label(gui, Localize.get("OBBY_TITLE"), UDim2.fromScale(0.9, 0.6), UDim2.fromScale(0.05, 0.08), P.Sun)
 		label(gui, Localize.get("OBBY_SUBTITLE"), UDim2.fromScale(0.9, 0.26), UDim2.fromScale(0.05, 0.68), P.White)
 	end)
-	Build.part({ Name = "ObbyPad", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 12, 12), CFrame = CFrame.new(gate.Position + y * 0.15) * SIDEWAYS, Color = P.Money, Material = Enum.Material.Neon, CanCollide = false, Parent = folder })
-	prompt(folder, CFrame.new(gate.Position + y * 3), "PROMPT_RIDE", "OBBY_TITLE", { Travel = Location.OBBY })
 	return finish
 end
 

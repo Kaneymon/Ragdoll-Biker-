@@ -1,6 +1,6 @@
--- The lobby obby (Config/Lobby.obby): riders who cross the finish line get the reward once per
--- ride, and anyone who falls off the course goes back to the lobby. Crashing and stopping on the
--- course is handled by RunTracker (unpaid rides end in the lobby).
+-- The lobby obby (Config/Lobby.obby): lobby riders who cross its finish line get the reward once
+-- per ride, and anyone who falls off the lobby or the course goes back to the middle. Crashing and
+-- stopping is handled by RunTracker (unpaid rides end back in the lobby).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -29,7 +29,7 @@ local function reward(player)
 	end)
 	Net.event("Notify"):FireClient(player, "NOTE_OBBY_DONE", Format.money(amount))
 	task.delay(AFTER_FINISH, function()
-		if finished[player] and Location.of(player) == Location.OBBY then
+		if finished[player] and Location.of(player) == Location.LOBBY then
 			LocationService.travel(player, Location.LOBBY)
 		end
 	end)
@@ -42,7 +42,7 @@ local function watch(lobby)
 		task.wait(CHECK_INTERVAL)
 		for _, player in Players:GetPlayers() do
 			local core = player.Character and Ragdoll.core(player.Character)
-			if core and Location.of(player) == Location.OBBY then
+			if core and Location.of(player) == Location.LOBBY then
 				if core.Position.Y < lowest then
 					LocationService.travel(player, Location.LOBBY)
 				elseif not finished[player] and core.Position.X > finishLine.Position.X then

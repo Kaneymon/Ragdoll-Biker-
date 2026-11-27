@@ -1,6 +1,7 @@
 -- The Lobby: a round floating deck in the sky behind the maps, looking down the ramps (+Z), ringed
--- with mega ramp barriers. Players start here, walk around, shop, check the leaderboards, idle in
--- the AFK corner or ride the obby; PLAY takes them to their ramp. Built by World/LobbyBuilder.
+-- with mega ramp barriers. Players ride round it on their bikes (no boosting, bombs or bailing),
+-- shop, check the leaderboards, idle in the AFK corner or ride out along the obby; PLAY takes them
+-- to their ramp. Built by World/LobbyBuilder.
 -- Angles are degrees around the deck: 0 = +X (east, where the obby leaves), 90 = +Z (towards the
 -- ramps). Prop models are in ServerStorage.Assets.Lobby (tools/lobby_props_blender.py).
 return {
@@ -9,7 +10,7 @@ return {
 	thickness = 10,
 	rim = { color = Color3.fromRGB(70, 74, 82), material = Enum.Material.DiamondPlate, height = 1.2, width = 3 },
 	underside = { depth = 70, color = Color3.fromRGB(88, 92, 100), material = Enum.Material.Metal },
-	spawnRadius = 24, -- players appear within this of the centre, facing the ramps
+	spawnRadius = 24, -- riders appear within this of the centre, facing the ramps
 	sign = { angle = 270, distance = 125, size = Vector2.new(60, 16) }, -- the big title board
 
 	-- shops: what the prompt opens. window = Hud window id, tab = tab to open on
@@ -41,8 +42,8 @@ return {
 	-- the obby: a wooden ramp course running out from the east edge (+X), dropping as it goes.
 	-- Pieces in order: slope = sloped deck (length, angle), kicker = launch curve, gap = air
 	-- (length, drop below the kicker lip), flat = level deck (finish = the finish line is on it).
-	-- Riders can't boost, bomb or bail; falling off or stopping after a crash sends them back to
-	-- the lobby. Reaching the end pays `reward`.
+	-- Lobby riding rules apply; falling off sends riders back to the middle of the lobby.
+	-- Reaching the end pays `reward`.
 	obby = {
 		width = 30,
 		thickness = 4,
