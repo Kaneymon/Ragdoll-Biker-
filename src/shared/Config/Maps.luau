@@ -29,9 +29,10 @@ local P = require(script.Parent.Palette)
 
 local SPACING = 2000 -- studs between map centres on X (each force field box is 1620 wide)
 
--- material = surface texture for the ground (nil = smooth plastic)
-local function theme(ground, groundDark, ramp, kickerA, kickerB, rail, material)
-	return { ground = ground, groundDark = groundDark, ramp = ramp, kickerA = kickerA, kickerB = kickerB, rail = rail, material = material }
+-- kickerA / kickerB = colours of the small launch-ramp props; material = surface texture for the
+-- ground (nil = smooth plastic). The mega ramps themselves all look the same (Config/MegaRamp).
+local function theme(ground, groundDark, kickerA, kickerB, material)
+	return { ground = ground, groundDark = groundDark, kickerA = kickerA, kickerB = kickerB, material = material }
 end
 
 return {
@@ -46,7 +47,7 @@ return {
 			ramp = { angle = 32, length = 680, width = 44, thickness = 6 },
 			runout = 50, kicker = { radius = 80, endAngle = 40, segments = 10 }, gap = 50,
 			landing = { angle = 14, length = 1700, width = 420 },
-			theme = theme(P.Grass, P.GrassDark, P.Wood, P.Coral, P.Orange, P.Coral, Enum.Material.Grass),
+			theme = theme(P.Grass, P.GrassDark, P.Coral, P.Orange, Enum.Material.Grass),
 			props = {
 				oakTrees = 14, firTrees = 10, bushes = 20, flowers = 36, parkBenches = 6,
 				picnicTables = 4, parkLamps = 6, swings = 2, jungleGyms = 2,
@@ -61,7 +62,7 @@ return {
 			ramp = { angle = 32, length = 1360, width = 50, thickness = 8 },
 			runout = 70, kicker = { radius = 120, endAngle = 40, segments = 12 }, gap = 70,
 			landing = { angle = 14, length = 5100, width = 420 },
-			theme = theme(P.Grass, P.GrassDark, P.Sky, P.Grape, P.Sky, P.Grape, Enum.Material.Grass),
+			theme = theme(P.Grass, P.GrassDark, P.Grape, P.Sky, Enum.Material.Grass),
 			surfaces = { { width = 270, color = P.ConcreteFloor, material = Enum.Material.Concrete } },
 			props = {
 				quarterPipes = 3, skateLaunchRamps = 3, jumpBoxes = 3, hipBumps = 3,
@@ -86,7 +87,7 @@ return {
 			ramp = { angle = 32, length = 2720, width = 56, thickness = 10 },
 			runout = 90, kicker = { radius = 160, endAngle = 40, segments = 14 }, gap = 90,
 			landing = { angle = 14, length = 15300, width = 420 },
-			theme = theme(P.Asphalt, P.Ink, P.Orange, P.Sun, P.Orange, P.Sun),
+			theme = theme(P.Asphalt, P.Ink, P.Sun, P.Orange),
 			props = { cars = 8, lamps = 8, crates = 4, benches = 4 },
 			propAreas = { cars = { 0, 95 }, lamps = { 115, 145 }, crates = { 115, 145 }, benches = { 115, 145 } },
 			street = { road = 220, pavement = 40, laneDash = 30, houseX = 180, houseSpacing = 75 },
@@ -98,7 +99,7 @@ return {
 			ramp = { angle = 32, length = 5440, width = 64, thickness = 12 },
 			runout = 110, kicker = { radius = 200, endAngle = 40, segments = 16 }, gap = 110,
 			landing = { angle = 14, length = 45900, width = 420 },
-			theme = theme(P.Snow, P.Stone, P.WoodDark, P.Sky, P.White, P.Sky),
+			theme = theme(P.Snow, P.Stone, P.Sky, P.White),
 			props = { pines = 4, boulders = 3 },
 			propGap = 10,
 			hillTrees = { "pines" },
@@ -124,7 +125,7 @@ return {
 			ramp = { angle = 32, length = 10880, width = 72, thickness = 14 },
 			runout = 130, kicker = { radius = 240, endAngle = 40, segments = 18 }, gap = 130,
 			landing = { angle = 14, length = 137700, width = 420 },
-			theme = theme(P.SpaceFloor, P.Ink, P.Metal, P.Grape, P.Coral, P.Grape),
+			theme = theme(P.SpaceFloor, P.Ink, P.Grape, P.Coral),
 			props = { crates = 1.5, rocks = 1.5, lamps = 1 },
 		},
 	},

@@ -4,11 +4,13 @@
 -- part hill, ground and landing slope, and their props are dropped onto it.
 -- The maths lives in Logic/MapGeometry so spawning works whether a map was built now or baked in.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 local Shared = ReplicatedStorage.Shared
 local P = require(Shared.Config.Palette)
 local Maps = require(Shared.Config.Maps)
 local MeshProps = require(Shared.Config.MeshProps)
 local Decals = require(Shared.Config.Decals)
+local MegaRamp = require(Shared.Config.MegaRamp)
 local MapGeometry = require(Shared.Logic.MapGeometry)
 local Build = require(script.Parent.Build)
 local Props = require(script.Parent.Props)
@@ -69,28 +71,52 @@ local function fillUnder(model, name, x, width, zA, yA, zB, yB, floorY, color, m
 	end
 end
 
+-- A chipboard ramp part (Config/MegaRamp surface); tiled = split it if it's too big for one part.
+local function wood(props, tiled)
+	local look = MegaRamp.surface
+	props.Material, props.MaterialVariant, props.Color = look.material, look.variant, look.color
+	return if tiled then Build.tiled(props) else Build.part(props)
+end
+
+-- Metal barrier sections along one side of a straight run, starting at `from` and going `along`
+-- for `length` studs, standing on a surface with normal `up`.
+local function barriers(folder, from, along, up, length)
+	local spec = MegaRamp.barrier
+	local count = math.max(1, math.ceil(length / spec.length - 0.25))
+	local step = length / count
+	for i = 1, count do
+		local barrier = ServerStorage.Assets[spec.folder][spec.mesh]:Clone()
+		barrier:PivotTo(CFrame.lookAt(from + along * (step * (i - 0.5)), from + along * (step * i), up))
+		barrier.Parent = folder
+	end
+end
+
+-- Barriers down both sides of a straight run of ramp `width` studs wide.
+local function sideBarriers(folder, from, along, up, length, width)
+	local across = along:Cross(up).Unit * (width / 2 + MegaRamp.barrier.inset)
+	for _, side in { -1, 1 } do
+		barriers(folder, from + across * side, along, up, length)
+	end
+end
+
 local function buildRamp(def, g, model, floorY)
 	local ramp, theme = def.ramp, def.theme
 	local mid = g.origin + g.down * (ramp.length / 2)
-	Build.tiled({ Name = "Ramp", Size = Vector3.new(ramp.width, ramp.thickness, ramp.length), CFrame = Build.onSurface(mid - g.normal * (ramp.thickness / 2), g.normal), Color = theme.ramp, Parent = model })
-	for _, part in Build.tiled({ Name = "Stripe", Size = Vector3.new(2, 0.2, ramp.length), CFrame = Build.onSurface(mid + g.normal * 0.1, g.normal), Color = P.Sun, Parent = model }) do
-		part.CanCollide, part.CanQuery, part.CanTouch = false, false, false
-	end
-	for _, side in { -1, 1 } do
-		local x = Vector3.new(side * (ramp.width / 2 + 0.6), 0, 0)
-		Build.tiled({ Name = "Rail", Size = Vector3.new(1.2, 3, ramp.length), CFrame = Build.onSurface(mid + x + g.normal * 1.5, g.normal), Color = theme.rail, Parent = model })
-	end
+	wood({ Name = "Ramp", Size = Vector3.new(ramp.width, ramp.thickness, ramp.length), CFrame = Build.onSurface(mid - g.normal * (ramp.thickness / 2), g.normal), Parent = model }, true)
+	sideBarriers(Build.model("Barriers", model), g.origin, g.down, g.normal, ramp.length, ramp.width)
 	if not def.terrain then -- (on terrain maps the terrain is the hill)
 		local hillWidth = ramp.width + HILL_MARGIN * 2
 		fillUnder(model, "Hill", g.origin.X, hillWidth, g.origin.Z, g.origin.Y - 0.4, g.bottom.Z, g.bottom.Y - 0.4, floorY, theme.ground, theme.material)
 		fillUnder(model, "HillTop", g.origin.X, hillWidth, g.origin.Z - HILL_MARGIN, g.origin.Y - 0.4, g.origin.Z, g.origin.Y - 0.4, floorY, theme.ground, theme.material)
 	end
-	Build.part({ Name = "StartDeck", Size = Vector3.new(ramp.width, ramp.thickness, 30), CFrame = CFrame.new(g.origin + Vector3.new(0, -ramp.thickness / 2, -15)), Color = theme.ramp, Parent = model })
+	wood({ Name = "StartDeck", Size = Vector3.new(ramp.width, ramp.thickness, 30), CFrame = CFrame.new(g.origin + Vector3.new(0, -ramp.thickness / 2, -15)), Parent = model })
 end
 
 local function buildKicker(def, g, model)
-	local kicker, width, theme = def.kicker, def.ramp.width, def.theme
-	Build.part({ Name = "Runout", Size = Vector3.new(width, def.ramp.thickness, def.runout + 1), CFrame = CFrame.new(g.bottom + Vector3.new(0, -def.ramp.thickness / 2, def.runout / 2)), Color = theme.ramp, Parent = model })
+	local kicker, width = def.kicker, def.ramp.width
+	local side = MegaRamp.kickerSide
+	wood({ Name = "Runout", Size = Vector3.new(width, def.ramp.thickness, def.runout + 1), CFrame = CFrame.new(g.bottom + Vector3.new(0, -def.ramp.thickness / 2, def.runout / 2)), Parent = model })
+	sideBarriers(model:FindFirstChild("Barriers") or Build.model("Barriers", model), g.bottom, Vector3.zAxis, Vector3.yAxis, def.runout, width)
 	local e = math.rad(kicker.endAngle)
 	local function arcPoint(phi)
 		return g.kickCentre + Vector3.new(0, -kicker.radius * math.cos(phi), kicker.radius * math.sin(phi))
@@ -100,10 +126,11 @@ local function buildKicker(def, g, model)
 		local along = (b - a).Unit
 		local up = Vector3.new(0, along.Z, -along.Y)
 		local mid = (a + b) / 2
-		local segment = Build.part({ Name = "Kicker", Size = Vector3.new(width, KICKER_DEPTH, (b - a).Magnitude + 0.4), CFrame = Build.onSurface(mid - up * (KICKER_DEPTH / 2), up), Color = if i % 2 == 0 then theme.kickerA else theme.kickerB, Parent = model })
+		local segment = wood({ Name = "Kicker", Size = Vector3.new(width, KICKER_DEPTH, (b - a).Magnitude + 0.4), CFrame = Build.onSurface(mid - up * (KICKER_DEPTH / 2), up), Parent = model })
 		segment:SetAttribute("Launch", true)
-		for _, side in { -1, 1 } do
-			Build.part({ Name = "Rail", Size = Vector3.new(1.2, 3, (b - a).Magnitude + 0.4), CFrame = Build.onSurface(mid + Vector3.new(side * (width / 2 + 0.6), 0, 0) + up * 1.5, up), Color = P.Sun, Parent = model })
+		for _, x in { -1, 1 } do -- metal side walls follow the curve
+			local offset = Vector3.new(x * (width / 2 + side.thickness / 2), 0, 0)
+			Build.part({ Name = "KickerSide", Size = Vector3.new(side.thickness, side.height, (b - a).Magnitude + 0.4), CFrame = Build.onSurface(mid + offset + up * (side.height / 2), up), Material = side.material, Color = side.color, Parent = model })
 		end
 	end
 end
