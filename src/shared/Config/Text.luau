@@ -163,10 +163,9 @@ local Text = {
 	PAY_LUCKY_LINE = "{1} x{2}",
 
 	-- Offer popup
-	OFFER_TITLE = "Special Deal!",
-	OFFER_OFF = "{1}% OFF!",
-	OFFER_MEGA = "MEGA DEAL!",
-	OFFER_PRICE = "{1}  |  R$ {2}",
+	OFFER_DEAL = "{1}% OFF {2}!",
+	OFFER_DEAL_MEGA = "MEGA DEAL! {1}% OFF {2}!",
+	BTN_PLAY = "PLAY",
 
 	-- Store items
 	PASS_2X_MONEY = "2x Money Forever",

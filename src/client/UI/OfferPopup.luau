@@ -1,4 +1,5 @@
 -- After each cash out: a random Store item at 5-25% off (1 in 250 runs: 80% off).
+-- The deal itself is the big headline; below it: buy (Robux price), UPGRADES or PLAY.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -12,7 +13,7 @@ local StoreWindow = require(script.Parent.StoreWindow)
 
 local OfferPopup = {}
 
-local root, titleLabel, nameLabel, priceLabel
+local root, dealLabel, buyButton
 local current = nil
 local allItems = {}
 for _, tab in Store.tabs do
@@ -31,26 +32,36 @@ end
 
 local function show()
 	current = rollOffer()
-	UiKit.setText(titleLabel, if current.mega then "OFFER_MEGA" else "OFFER_TITLE")
-	UiKit.setText(nameLabel, current.item.nameKey)
-	priceLabel.Text = Localize.get("OFFER_PRICE", Localize.get("OFFER_OFF", current.discount), current.price)
+	UiKit.setText(dealLabel, if current.mega then "OFFER_DEAL_MEGA" else "OFFER_DEAL", current.discount, Localize.get(current.item.nameKey))
+	UiKit.setText(buyButton, "BTN_ROBUX", current.price)
 	root.Visible = true
 	UiKit.pop(root)
 end
 
-function OfferPopup.create()
+local function hide()
+	root.Visible = false
+end
+
+-- windows = the menu windows from Main (the UPGRADES button opens windows.upgrades).
+function OfferPopup.create(windows)
 	local gui = UiKit.screen("Offer", 15)
-	root = UiKit.panel({ Size = UDim2.fromOffset(520, 330), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), Visible = false, Parent = gui })
-	local header = UiKit.panel({ Size = UDim2.new(1, 0, 0, 70), BackgroundColor3 = P.Orange, Parent = root })
-	titleLabel = UiKit.label({ key = "OFFER_TITLE", style = "Title", color = P.White, outline = true, Size = UDim2.fromScale(1, 1), Parent = header })
-	nameLabel = UiKit.label({ text = "", style = "Heading", Size = UDim2.new(1, -20, 0, 50), Position = UDim2.fromOffset(10, 84), Parent = root })
-	priceLabel = UiKit.label({ text = "", style = "Heading", color = P.Money, Size = UDim2.new(1, -20, 0, 44), Position = UDim2.fromOffset(10, 134), Parent = root })
-	UiKit.button({ key = "BTN_SOON", color = P.Money, Size = UDim2.new(0.8, 0, 0, 60), Position = UDim2.new(0.5, 0, 0, 220), AnchorPoint = Vector2.new(0.5, 0.5), Parent = root, onClick = function()
+	root = UiKit.panel({ Size = UDim2.fromOffset(560, 360), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), Visible = false, Parent = gui })
+	local header = UiKit.panel({ Size = UDim2.new(1, 0, 0, 170), BackgroundColor3 = P.Orange, Parent = root })
+	UiKit.padding(header, 14)
+	dealLabel = UiKit.label({ text = "", style = "Huge", color = P.White, outline = true, Size = UDim2.fromScale(1, 1), Parent = header })
+	dealLabel.TextScaled = true
+	local maxSize = Instance.new("UITextSizeConstraint")
+	maxSize.MaxTextSize = 72
+	maxSize.Parent = dealLabel
+
+	buyButton = UiKit.button({ key = "BTN_ROBUX", args = { 0 }, color = P.Money, style = "Title", Size = UDim2.new(0.86, 0, 0, 70), Position = UDim2.new(0.5, 0, 0, 225), AnchorPoint = Vector2.new(0.5, 0.5), Parent = root, onClick = function()
 		StoreWindow.prompt(current.item.id)
 	end })
-	UiKit.button({ key = "BTN_NO_THANKS", color = P.Disabled, style = "Body", Size = UDim2.new(0.5, 0, 0, 46), Position = UDim2.new(0.5, 0, 0, 290), AnchorPoint = Vector2.new(0.5, 0.5), Parent = root, onClick = function()
-		root.Visible = false
+	UiKit.button({ key = "BTN_UPGRADES", color = P.Orange, style = "Heading", Size = UDim2.new(0.42, 0, 0, 56), Position = UDim2.new(0.28, 0, 0, 310), AnchorPoint = Vector2.new(0.5, 0.5), Parent = root, onClick = function()
+		hide()
+		windows.upgrades:open()
 	end })
+	UiKit.button({ key = "BTN_PLAY", color = P.Sky, style = "Heading", Size = UDim2.new(0.42, 0, 0, 56), Position = UDim2.new(0.72, 0, 0, 310), AnchorPoint = Vector2.new(0.5, 0.5), Parent = root, onClick = hide })
 
 	State.CashedOut:Connect(function()
 		local connection
@@ -63,7 +74,7 @@ function OfferPopup.create()
 	end)
 	State.PhaseChanged:Connect(function(phase)
 		if phase == "Riding" then
-			root.Visible = false
+			hide()
 		end
 	end)
 end

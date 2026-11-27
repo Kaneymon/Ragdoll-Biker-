@@ -22,7 +22,7 @@ local windows = {
 }
 require(UI.Hud).create(windows)
 require(UI.PayoutSheet).create()
-require(UI.OfferPopup).create()
+require(UI.OfferPopup).create(windows)
 
 -- Last: starts receiving the profile and the character's bike.
 require(Controllers.Session).start()
