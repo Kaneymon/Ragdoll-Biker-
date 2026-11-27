@@ -10,6 +10,7 @@ local Localize = require(Shared.Services.Localize)
 local State = require(script.Parent.Parent.State)
 local UiKit = require(script.Parent.UiKit)
 local StoreWindow = require(script.Parent.StoreWindow)
+local Window = require(script.Parent.Window)
 
 local OfferPopup = {}
 
@@ -69,6 +70,7 @@ function OfferPopup.create(windows)
 			hide()
 		end
 	end)
+	Window.Opened:Connect(hide) -- any menu (Upgrades, Store, Settings) replaces the popup
 end
 
 return OfferPopup

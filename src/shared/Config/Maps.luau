@@ -9,6 +9,10 @@
 -- path = a brick-lined path winding down the landing slope (amplitude/wavelength in studs),
 --   starting `start` studs down it; props keep clear of it.
 -- hillTrees = prop keys planted along both sides of the mega ramp.
+-- surfaces = stripes of a different floor down the slope ({ width, color, material }, centred).
+-- propGap = extra studs kept between props. fenceMesh = Config/MeshProps key used for the
+--   perimeter fence (one segment every `length` studs) instead of plain rails.
+-- decals = images from Config/Decals scattered on the floor ({ set, count, size, area }).
 -- Prop keys: the part-built props in World/Props and the textured meshes in Config/MeshProps.
 local P = require(script.Parent.Palette)
 
@@ -45,9 +49,19 @@ return {
 			ramp = { angle = 32, length = 1360, width = 50, thickness = 8 },
 			runout = 70, kicker = { radius = 120, endAngle = 40, segments = 12 }, gap = 70,
 			landing = { angle = 14, length = 5100, width = 420 },
-			theme = theme(P.Concrete, P.Stone, P.Sky, P.Grape, P.Sky, P.Grape),
-			props = { crates = 14, benches = 10, rocks = 12, fences = 10, rails = 10, launchRamps = 3 },
-			propAreas = { launchRamps = { 0, 150 } },
+			theme = theme(P.Grass, P.GrassDark, P.Sky, P.Grape, P.Sky, P.Grape, Enum.Material.Grass),
+			surfaces = { { width = 270, color = P.ConcreteFloor, material = Enum.Material.Concrete } },
+			props = {
+				quarterPipes = 3, skateLaunchRamps = 3, jumpBoxes = 3, hipBumps = 3,
+				grindBoxes = 4, grindRails = 4, skateBenches = 3,
+			},
+			propAreas = {
+				quarterPipes = { 0, 105 }, skateLaunchRamps = { 0, 105 }, jumpBoxes = { 0, 105 }, hipBumps = { 0, 105 },
+				grindBoxes = { 0, 110 }, grindRails = { 0, 110 }, skateBenches = { 112, 125 },
+			},
+			propGap = 18,
+			fenceMesh = { key = "chainFence", length = 11.5 },
+			decals = { set = "graffiti", count = 45, size = 34, area = { 0, 120 } },
 		},
 		{
 			id = "streets", nameKey = "MAP_STREETS", price = 2500000, level = 20, payoutMult = 4,

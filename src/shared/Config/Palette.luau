@@ -30,4 +30,5 @@ return {
 	Paper = Color3.fromRGB(255, 251, 236),
 	PathStone = Color3.fromRGB(214, 196, 160),
 	Brick = Color3.fromRGB(176, 88, 66),
+	ConcreteFloor = Color3.fromRGB(150, 150, 146),
 }

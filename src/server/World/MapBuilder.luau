@@ -6,6 +6,7 @@ local Shared = ReplicatedStorage.Shared
 local P = require(Shared.Config.Palette)
 local Maps = require(Shared.Config.Maps)
 local MeshProps = require(Shared.Config.MeshProps)
+local Decals = require(Shared.Config.Decals)
 local MapGeometry = require(Shared.Logic.MapGeometry)
 local Build = require(script.Parent.Build)
 local Props = require(script.Parent.Props)
@@ -41,7 +42,7 @@ local PROP_BUILDERS = {
 for key, def in MeshProps.list do -- textured Blender props
 	PROP_BUILDERS[key] = { build = function(rng)
 		return Props.mesh(def, rng)
-	end, upright = def.upright }
+	end, upright = def.upright, facing = def.facing }
 end
 local PATH_CLEARANCE = 8 -- props keep this far from the path's edge
 local FOOTPRINT_SHARE = 0.75 -- how much of a prop's width counts when keeping props apart
@@ -183,7 +184,21 @@ local function buildFences(def, g, model)
 	local folder = Build.model("Fences", model)
 	local half = def.landing.width / 2 - FENCE_INSET
 	local spacing = math.max(Maps.FenceSpacing, def.landing.length / MAX_FENCE_POSTS)
+	local function meshLine(from, to, normal)
+		local fence = def.fenceMesh
+		local dir = (to - from).Unit
+		local count = math.max(1, math.floor((to - from).Magnitude / fence.length))
+		local step = (to - from).Magnitude / count
+		for i = 0, count - 1 do
+			local piece = PROP_BUILDERS[fence.key].build(Random.new(i))
+			piece:PivotTo(CFrame.fromMatrix(from + dir * ((i + 0.5) * step), dir, normal))
+			piece.Parent = folder
+		end
+	end
 	local function fenceLine(from, to, normal)
+		if def.fenceMesh then
+			return meshLine(from, to, normal)
+		end
 		local length = (to - from).Magnitude
 		local dir = (to - from).Unit
 		local frame = CFrame.fromMatrix((from + to) / 2, normal:Cross(dir).Unit, normal)
@@ -205,17 +220,45 @@ local function buildFences(def, g, model)
 end
 
 -- A surface stripe running down the slope and across the park (visual only, sits on the ground).
-local function stripe(g, folder, name, x, width, color)
+local function stripe(g, folder, name, x, width, color, material)
 	local function piece(from, to, normal)
 		local length = (to - from).Magnitude
 		local frame = CFrame.fromMatrix((from + to) / 2, normal:Cross((to - from).Unit).Unit, normal)
-		for _, part in Build.tiled({ Name = name, Size = Vector3.new(width, 0.2, length), CFrame = frame * CFrame.new(0, 0.12, 0), Color = color, Parent = folder }) do
+		for _, part in Build.tiled({ Name = name, Size = Vector3.new(width, 0.2, length), CFrame = frame * CFrame.new(0, 0.12, 0), Color = color, Material = material, Parent = folder }) do
 			part.CanCollide, part.CanQuery, part.CanTouch = false, false, false
 		end
 	end
 	local offset = Vector3.new(x, 0, 0)
 	piece(g.landStart + offset, g.landEnd + offset, g.landNormal)
 	piece(g.landEnd + offset, g.landEnd + offset + Vector3.new(0, 0, PARK_LENGTH), Vector3.yAxis)
+end
+
+-- Floor stripes down the middle (e.g. the Skate Park's concrete between grass verges).
+local function buildSurfaces(def, g, model)
+	local folder = Build.model("Surfaces", model)
+	for i, surface in def.surfaces do
+		stripe(g, folder, "Surface" .. i, 0, surface.width, surface.color, surface.material)
+	end
+end
+
+-- Images (graffiti) laid flat on the floor at random spots and angles.
+local function buildDecals(def, g, model, rng)
+	local spec = def.decals
+	local images = Decals[spec.set]
+	if #images == 0 then
+		return
+	end
+	local folder = Build.model("Decals", model)
+	for _ = 1, spec.count do
+		local along = rng:NextNumber(60, def.landing.length - 30)
+		local x = rng:NextNumber(spec.area[1], spec.area[2]) * (if rng:NextNumber() < 0.5 then -1 else 1)
+		local at = g.landStart + g.landDown * along + Vector3.new(x, 0, 0)
+		local holder = Build.decor({ Name = "Graffiti", Size = Vector3.new(spec.size, 0.05, spec.size / 2), Transparency = 1, CFrame = Build.onSurface(at, g.landNormal) * CFrame.new(0, 0.26, 0) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0), Parent = folder })
+		local decal = Instance.new("Decal")
+		decal.Face = Enum.NormalId.Top
+		decal.Texture = images[rng:NextInteger(1, #images)]
+		decal.Parent = holder
+	end
 end
 
 -- Streets: road down the middle with dashed centre line, pavements either side, houses outside.
@@ -325,7 +368,7 @@ local function placeProps(def, g, model)
 			local normal = if onSlope and not builder.upright then g.landNormal else Vector3.yAxis
 			local turn = if builder.facing then 0 else rng:NextNumber(0, math.pi * 2)
 			local prop = builder.build(rng, def.theme)
-			local radius = footprint(prop)
+			local radius = footprint(prop) + (def.propGap or 0) / 2
 			if overlaps(placed, x, along, radius) then
 				prop:Destroy()
 				continue
@@ -362,6 +405,12 @@ function MapBuilder.build(def, parent)
 	end
 	if def.path then
 		buildPath(def, g, model)
+	end
+	if def.surfaces then
+		buildSurfaces(def, g, model)
+	end
+	if def.decals then
+		buildDecals(def, g, model, Random.new(def.seed + 2))
 	end
 	placeProps(def, g, model)
 	model.Parent = parent

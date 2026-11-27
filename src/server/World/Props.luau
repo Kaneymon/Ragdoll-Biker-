@@ -20,13 +20,16 @@ end
 
 -- A textured Blender prop (Config/MeshProps entry), randomly sized within its scale range.
 function Props.mesh(def, rng: Random)
-	local model = ServerStorage.Assets[MeshProps.folder][def.mesh]:Clone()
+	local model = ServerStorage.Assets[def.folder or MeshProps.folder][def.mesh]:Clone()
 	model:ScaleTo(model:GetScale() * rng:NextNumber(def.scale[1], def.scale[2])) -- relative to the stored size
 	for _, part in model:GetDescendants() do
 		if part:IsA("BasePart") then
 			part.CanCollide = def.collide
 			part.CanQuery = def.collide
 			part.CanTouch = false
+			if def.launch then
+				part:SetAttribute("Launch", true) -- the bike flies off it (BikeController)
+			end
 		end
 	end
 	return model

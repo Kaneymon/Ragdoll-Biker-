@@ -1,5 +1,5 @@
 -- Modal window with a title, close button, optional tab row and a single-column scroll list.
--- Only one window is open at a time.
+-- Only one window is open at a time. Window.Opened fires when any window opens (popups close).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -7,9 +7,10 @@ local Theme = require(Shared.Config.Theme)
 local P = require(Shared.Config.Palette)
 local Assets = require(Shared.Config.UiAssets)
 local Sfx = require(Shared.Services.Sfx)
+local Signal = require(Shared.Util.Signal)
 local UiKit = require(script.Parent.UiKit)
 
-local Window = {}
+local Window = { Opened = Signal.new() }
 Window.__index = Window
 
 local TITLE_HEIGHT = 70
@@ -90,6 +91,7 @@ function Window:open()
 	end
 	if not self.root.Visible then
 		Sfx.play("WindowOpen")
+		Window.Opened:Fire(self)
 	end
 	self.root.Visible = true
 	if self.tab then
