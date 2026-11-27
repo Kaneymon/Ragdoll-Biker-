@@ -17,6 +17,7 @@ return {
 		parkLamps = { mesh = "Lamp", scale = { 1.3, 1.3 }, upright = true, collide = true },
 		swings = { mesh = "SwingSet", scale = { 1.4, 1.4 }, upright = false, collide = true },
 		jungleGyms = { mesh = "JungleGym", scale = { 1.4, 1.4 }, upright = false, collide = true },
+		grassClumps = { mesh = "GrassClump", scale = { 1.2, 2.2 }, upright = false, collide = false },
 
 		-- Skate Park (tools/skate_props_blender.py, ids in assets/models/skate/README.md)
 		quarterPipes = { folder = "Skate", mesh = "QuarterPipe", scale = { 1.4, 1.4 }, collide = true, launch = true, facing = true },

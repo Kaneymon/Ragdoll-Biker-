@@ -4,6 +4,7 @@
   LeafCard.png   - a loose cluster of leaves on a transparent background (leaf cards)
   FirNeedles.png - tileable fir boughs: branches covered in needles
   Petal.png      - a single petal shape, pale at the tip, deeper at the base (transparent background)
+  GrassBlades.png - a tuft of curved grass blades growing from the bottom edge (transparent background)
 Usage: python tools/park_textures.py <outdir>
 """
 import math
@@ -139,9 +140,41 @@ def petal():
     return img.filter(ImageFilter.SMOOTH)
 
 
+def grass_blades():
+    size = 512
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img, "RGBA")
+    for _ in range(70):
+        base_x = rng.uniform(size * 0.08, size * 0.92)
+        height = rng.uniform(size * 0.45, size * 0.97)
+        lean = rng.uniform(-0.45, 0.45) * height
+        width = rng.uniform(10, 20)
+        dark = jitter((55, 120, 40), 15)
+        light = jitter((150, 210, 90), 15)
+        steps = 12
+        left, right = [], []
+        for i in range(steps + 1):
+            t = i / steps
+            x = base_x + lean * t * t  # curves over towards the tip
+            y = size - height * t
+            w = width * (1 - t) ** 0.8 / 2
+            left.append((x - w, y))
+            right.append((x + w, y))
+        pts = left + right[::-1]
+        draw.polygon(pts, fill=dark + (255,))
+        # lighter towards the tip: draw the upper part again in the light colour
+        upper = left[5:] + right[5:][::-1]
+        draw.polygon(upper, fill=tuple((a + b) // 2 for a, b in zip(dark, light)) + (255,))
+        tip = left[9:] + right[9:][::-1]
+        draw.polygon(tip, fill=light + (255,))
+        draw.line([(base_x, size), left[-1]], fill=tuple(min(255, c + 30) for c in light) + (150,), width=1)
+    return img
+
+
 os.makedirs(OUT, exist_ok=True)
 leaves_tile().convert("RGB").save(os.path.join(OUT, "Leaves.png"))
 leaf_card().save(os.path.join(OUT, "LeafCard.png"))
 fir_tile().convert("RGB").save(os.path.join(OUT, "FirNeedles.png"))
 petal().save(os.path.join(OUT, "Petal.png"))
+grass_blades().save(os.path.join(OUT, "GrassBlades.png"))
 print("painted")

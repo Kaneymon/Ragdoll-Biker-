@@ -18,3 +18,4 @@ with a SurfaceAppearance per prop:
 | Lamp | 91368396267364 | 77733248430856 |
 | SwingSet | 76617787851363 | 100420713700106 |
 | JungleGym | 95193955772378 | 100615264391710 |
+| GrassClump (alpha, tools/grass_props_blender.py) | 86079289662855 | 70735853059158 |

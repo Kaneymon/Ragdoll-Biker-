@@ -54,10 +54,14 @@ return {
 			props = {
 				quarterPipes = 3, skateLaunchRamps = 3, jumpBoxes = 3, hipBumps = 3,
 				grindBoxes = 4, grindRails = 4, skateBenches = 3,
+				-- the grass strips either side of the concrete
+				oakTrees = 3, firTrees = 2, flowers = 8, bushes = 3, parkBenches = 0.8, grassClumps = 22,
 			},
 			propAreas = {
 				quarterPipes = { 0, 105 }, skateLaunchRamps = { 0, 105 }, jumpBoxes = { 0, 105 }, hipBumps = { 0, 105 },
 				grindBoxes = { 0, 110 }, grindRails = { 0, 110 }, skateBenches = { 112, 125 },
+				oakTrees = { 150, 190 }, firTrees = { 150, 190 }, flowers = { 142, 192 }, bushes = { 145, 192 },
+				parkBenches = { 142, 150 }, grassClumps = { 140, 194 },
 			},
 			propGap = 18,
 			fenceMesh = { key = "chainFence", length = 11.5 },
