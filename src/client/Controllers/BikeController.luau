@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Ground = require(Shared.Logic.Ground)
 local Bike = require(Shared.Config.Bike)
 local State = require(script.Parent.Parent.State)
 local Input = require(script.Parent.Input)
@@ -213,7 +214,7 @@ function BikeController.attach(bike: Model, isCurrent: () -> boolean): boolean
 	if not (chassis and frameRoot and bike.Parent and isCurrent()) then
 		return false
 	end
-	rayParams.FilterDescendantsInstances = { workspace:WaitForChild("World") }
+	rayParams.FilterDescendantsInstances = Ground.instances()
 	ride = {
 		bike = bike,
 		chassis = chassis,

@@ -1,5 +1,7 @@
 -- Builds a map from its Config/Maps entry: mega ramp hill, kicker, landing slope, fences, props,
 -- and a sealed force-field box around it all. Big shapes are tiled (parts max out at 2048 studs).
+-- Maps with a `terrain` entry get Roblox terrain ground (World/TerrainBuilder) instead of the
+-- part hill, ground and landing slope, and their props are dropped onto it.
 -- The maths lives in Logic/MapGeometry so spawning works whether a map was built now or baked in.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
@@ -10,6 +12,7 @@ local Decals = require(Shared.Config.Decals)
 local MapGeometry = require(Shared.Logic.MapGeometry)
 local Build = require(script.Parent.Build)
 local Props = require(script.Parent.Props)
+local TerrainBuilder = require(script.Parent.TerrainBuilder)
 
 local MapBuilder = {}
 
@@ -23,6 +26,7 @@ local WALL_DEPTH = 500 -- how far walls reach below the ground
 local CHUNK = 2000 -- force field built in chunks of this length (z)
 local FENCE_INSET = 10
 local MAX_FENCE_POSTS = 400
+local HILL_TREES = 24 -- default trees along the mega ramp (Config/Maps hillTreeCount overrides)
 
 -- config key -> builder; upright = stands straight up (else follows the slope);
 -- facing = keep pointing downhill (else turned at random)
@@ -42,7 +46,7 @@ local PROP_BUILDERS = {
 for key, def in MeshProps.list do -- textured Blender props
 	PROP_BUILDERS[key] = { build = function(rng)
 		return Props.mesh(def, rng)
-	end, upright = def.upright, facing = def.facing }
+	end, upright = def.upright, facing = def.facing, sink = def.sink }
 end
 local PATH_CLEARANCE = 8 -- props keep this far from the path's edge
 local FOOTPRINT_SHARE = 0.75 -- how much of a prop's width counts when keeping props apart
@@ -76,9 +80,11 @@ local function buildRamp(def, g, model, floorY)
 		local x = Vector3.new(side * (ramp.width / 2 + 0.6), 0, 0)
 		Build.tiled({ Name = "Rail", Size = Vector3.new(1.2, 3, ramp.length), CFrame = Build.onSurface(mid + x + g.normal * 1.5, g.normal), Color = theme.rail, Parent = model })
 	end
-	local hillWidth = ramp.width + HILL_MARGIN * 2
-	fillUnder(model, "Hill", g.origin.X, hillWidth, g.origin.Z, g.origin.Y - 0.4, g.bottom.Z, g.bottom.Y - 0.4, floorY, theme.ground, theme.material)
-	fillUnder(model, "HillTop", g.origin.X, hillWidth, g.origin.Z - HILL_MARGIN, g.origin.Y - 0.4, g.origin.Z, g.origin.Y - 0.4, floorY, theme.ground, theme.material)
+	if not def.terrain then -- (on terrain maps the terrain is the hill)
+		local hillWidth = ramp.width + HILL_MARGIN * 2
+		fillUnder(model, "Hill", g.origin.X, hillWidth, g.origin.Z, g.origin.Y - 0.4, g.bottom.Z, g.bottom.Y - 0.4, floorY, theme.ground, theme.material)
+		fillUnder(model, "HillTop", g.origin.X, hillWidth, g.origin.Z - HILL_MARGIN, g.origin.Y - 0.4, g.origin.Z, g.origin.Y - 0.4, floorY, theme.ground, theme.material)
+	end
 	Build.part({ Name = "StartDeck", Size = Vector3.new(ramp.width, ramp.thickness, 30), CFrame = CFrame.new(g.origin + Vector3.new(0, -ramp.thickness / 2, -15)), Color = theme.ramp, Parent = model })
 end
 
@@ -377,6 +383,20 @@ local function overlaps(placed, x, along, radius)
 	return false
 end
 
+-- On terrain maps, moves a placed prop up or down onto the bumpy ground under it, buried by
+-- `sink` (share of its height, from Config/MeshProps) so it doesn't float over slopes.
+local terrainOnly = RaycastParams.new()
+terrainOnly.FilterType = Enum.RaycastFilterType.Include
+terrainOnly.FilterDescendantsInstances = { workspace.Terrain }
+local function settle(def, prop, sink)
+	if def.terrain then
+		local pivot = prop:GetPivot()
+		local y = TerrainBuilder.groundY(pivot.Position, terrainOnly)
+		local buried = 0.6 + (sink or 0) * prop:GetExtentsSize().Y
+		prop:PivotTo(pivot + Vector3.new(0, y - pivot.Position.Y - buried, 0))
+	end
+end
+
 local function footprint(prop)
 	local size = prop:GetExtentsSize()
 	return math.max(size.X, size.Z) / 2 * FOOTPRINT_SHARE
@@ -414,29 +434,42 @@ local function placeProps(def, g, model)
 			end
 			table.insert(placed, { x = x, along = along, radius = radius })
 			prop:PivotTo(Build.onSurface(position, normal) * CFrame.Angles(0, turn, 0))
+			settle(def, prop, builder.sink)
 			prop.Parent = folder
 		end
 	end
 	-- trees along the sides of the mega ramp hill
+	local outer = if def.terrain then def.landing.width / 2 else def.ramp.width / 2 + HILL_MARGIN - 5
 	for i, key in def.hillTrees or {} do
-		for n = 1, 24 / #def.hillTrees do
+		for n = 1, (def.hillTreeCount or HILL_TREES) / #def.hillTrees do
 			local along = rng:NextNumber(40, def.ramp.length - 20)
 			local side = if (n + i) % 2 == 0 then 1 else -1
-			local x = side * rng:NextNumber(def.ramp.width / 2 + 12, def.ramp.width / 2 + HILL_MARGIN - 5)
+			local x = side * rng:NextNumber(def.ramp.width / 2 + 12, outer)
 			local tree = PROP_BUILDERS[key].build(rng, def.theme)
 			tree:PivotTo(CFrame.new(g.origin + g.down * along + Vector3.new(x, -0.6, 0)))
+			settle(def, tree, PROP_BUILDERS[key].sink)
 			tree.Parent = folder
 		end
 	end
 end
 
-function MapBuilder.build(def, parent)
+MapBuilder.PARK_LENGTH = PARK_LENGTH
+
+-- options.skipTerrain = the terrain is already laid (Studio tools lay big maps in batches).
+function MapBuilder.build(def, parent, options)
 	local g = MapGeometry.get(def)
 	local floorY = g.landEnd.Y
 	local model = Build.model(def.id)
 	buildRamp(def, g, model, floorY)
 	buildKicker(def, g, model)
-	buildGround(def, g, model, floorY)
+	if def.terrain then
+		if not (options and options.skipTerrain) then
+			TerrainBuilder.buildAll(def, g, PARK_LENGTH)
+		end
+		TerrainBuilder.buildSkirts(def, g, PARK_LENGTH, model)
+	else
+		buildGround(def, g, model, floorY)
+	end
 	buildBarrier(def, g, model)
 	buildFences(def, g, model)
 	if def.street then

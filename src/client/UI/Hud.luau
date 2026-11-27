@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Ground = require(Shared.Logic.Ground)
 local P = require(Shared.Config.Palette)
 local Theme = require(Shared.Config.Theme)
 local Progression = require(Shared.Logic.Progression)
@@ -205,7 +206,7 @@ local function nearGround(chassis)
 	if velocity.Y >= 0 then
 		return false
 	end
-	rayParams.FilterDescendantsInstances = { workspace:FindFirstChild("World") }
+	rayParams.FilterDescendantsInstances = Ground.instances()
 	return workspace:Raycast(chassis.Position, velocity * BAIL_LOOKAHEAD, rayParams) ~= nil
 end
 

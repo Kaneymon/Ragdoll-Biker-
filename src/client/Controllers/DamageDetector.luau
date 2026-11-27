@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Ground = require(Shared.Logic.Ground)
 local Injuries = require(Shared.Config.Injuries)
 local InjuryModel = require(Shared.Logic.InjuryModel)
 local Ragdoll = require(Shared.Logic.Ragdoll)
@@ -129,7 +130,7 @@ end
 local function onPhase(phase, previous)
 	if phase == "Ragdoll" and State.character then
 		parts = Ragdoll.parts(State.character)
-		rayParams.FilterDescendantsInstances = { workspace:WaitForChild("World") }
+		rayParams.FilterDescendantsInstances = Ground.instances()
 		table.clear(lastHit)
 		contactTimer = 0
 		DamageDetector.reset()

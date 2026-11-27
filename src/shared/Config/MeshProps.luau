@@ -4,7 +4,7 @@
 -- mesh = model name; scale = { min, max } random size; upright = stands straight up on slopes
 -- (else tilts with the ground); collide = solid for bikes and ragdolls; folder = overrides the
 -- default asset folder; launch = the bike flies off it (like the kickers); facing = keeps pointing
--- downhill instead of a random turn (ramps).
+-- downhill instead of a random turn (ramps); sink = share of its height buried in terrain ground.
 return {
 	folder = "Park",
 	list = {
@@ -18,6 +18,11 @@ return {
 		swings = { mesh = "SwingSet", scale = { 1.4, 1.4 }, upright = false, collide = true },
 		jungleGyms = { mesh = "JungleGym", scale = { 1.4, 1.4 }, upright = false, collide = true },
 		grassClumps = { mesh = "GrassClump", scale = { 1.2, 2.2 }, upright = false, collide = false },
+
+		-- Mountain: tall pines (the park's fir tree, bigger) and boulders
+		-- (tools/mountain_props_blender.py, ids in assets/models/mountain/README.md)
+		pines = { mesh = "FirTree", scale = { 2.2, 3.8 }, upright = true, collide = true, sink = 0.03 },
+		boulders = { folder = "Mountain", mesh = "Boulder", scale = { 1.5, 4 }, upright = true, collide = true, sink = 0.3 },
 
 		-- Skate Park (tools/skate_props_blender.py, ids in assets/models/skate/README.md)
 		quarterPipes = { folder = "Skate", mesh = "QuarterPipe", scale = { 1.4, 1.4 }, collide = true, launch = true, facing = true },

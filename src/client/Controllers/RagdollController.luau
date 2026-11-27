@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Ground = require(Shared.Logic.Ground)
 local Bike = require(Shared.Config.Bike)
 local Ragdoll = require(Shared.Logic.Ragdoll)
 local MapGeometry = require(Shared.Logic.MapGeometry)
@@ -75,7 +76,7 @@ local function finish()
 end
 
 local function onGround()
-	groundParams.FilterDescendantsInstances = { workspace:FindFirstChild("World") }
+	groundParams.FilterDescendantsInstances = Ground.instances()
 	return workspace:Raycast(active.core.Position, Vector3.new(0, -Bike.Glide.GroundReach, 0), groundParams) ~= nil
 end
 

@@ -1,20 +1,29 @@
 -- Maps. Geometry feeds Logic/MapGeometry (maths) and World/MapBuilder (parts).
 -- Each map: ramp length 2x the previous map, landing slope 3x the previous map.
 -- origin = top of the mega ramp (downhill is +Z); all maps end near y = -250, side by side on X,
--- SPACING apart, so every map can see (and see the riders on) its neighbours.
+-- SPACING apart, so every map can see (and see the riders on) its neighbours (the Mountain sits on
+-- the far side of the Hill Park, at -SPACING).
 -- props = how many of each prop per 1000 studs of landing slope (capped by PropCap).
 -- propAreas = where across the slope a prop may go: { from, to } studs from the centre line
 --   (either side); anything not listed can go anywhere.
 -- street = draw a road down the middle, pavements either side and houses along the outside.
 -- path = a brick-lined path winding down the landing slope (amplitude/wavelength in studs),
 --   starting `start` studs down it; props keep clear of it.
--- hillTrees = prop keys planted along both sides of the mega ramp.
+-- hillTrees = prop keys planted along both sides of the mega ramp (hillTreeCount of them, default 24).
 -- surfaces = stripes of a different floor down the slope ({ width, color, material }, centred).
 -- propGap = extra studs kept between props. fenceMesh = Config/MeshProps key used for the
 --   perimeter fence (one segment every `length` studs) instead of plain rails.
 -- decals = images from Config/Decals scattered on the floor ({ set, count, size, area }).
 -- endWall = what closes off the bottom of the park: { wall = MeshProps key, column = MeshProps key
 --   between sections (optional) } or { houses = true } for a row of house fronts.
+-- terrain = the ground is Roblox terrain (World/TerrainBuilder) instead of parts: the ride line with
+--   bumps on the landing, valley sides, a summit behind the start, materials by height and slope.
+--   cell = grid size (studs), shell = terrain thickness, halfWidth = how far out the valley sides
+--   reach, under* = how far the terrain sits below the ramp / shelf parts, iceDepth = studs below
+--   the top where snow and ice stop, glacierSlope / grassSlope = degrees (steeper than grassSlope
+--   is rock), shelfFlatten = how much the valley sides drop away beside the kicker shelf.
+--   skirt = rock walls from the terrain's edges down to the floor: lip = how far the edges turn
+--   down, thickness, step = length of each wall section.
 -- Prop keys: the part-built props in World/Props and the textured meshes in Config/MeshProps.
 local P = require(script.Parent.Palette)
 
@@ -85,13 +94,29 @@ return {
 		},
 		{
 			id = "mountain", nameKey = "MAP_MOUNTAIN", price = 25000000, level = 30, payoutMult = 8,
-			origin = Vector3.new(SPACING * 3, 13737, 0), seed = 31,
+			origin = Vector3.new(-SPACING, 13737, 0), seed = 31,
 			ramp = { angle = 32, length = 5440, width = 64, thickness = 12 },
 			runout = 110, kicker = { radius = 200, endAngle = 40, segments = 16 }, gap = 110,
 			landing = { angle = 14, length = 45900, width = 420 },
 			theme = theme(P.Snow, P.Stone, P.WoodDark, P.Sky, P.White, P.Sky),
-			props = { trees = 4, rocks = 4, crates = 1 },
-			hillTrees = { "trees" },
+			props = { pines = 4, boulders = 3 },
+			propGap = 10,
+			hillTrees = { "pines" },
+			hillTreeCount = 160,
+			terrain = {
+				cell = 40, shell = 24, halfWidth = 720,
+				underRamp = 14, underShelf = 14,
+				noise = { amplitude = 22, scale = 190, calmStart = 250, edgeCalm = 90, fenceClear = 20 },
+				sideRise = 260, sideNoise = 90, shelfFlatten = 0.85,
+				summit = { height = 1100, behind = 650, radius = 620 },
+				iceDepth = 2000, glacierSlope = 38, grassSlope = 17,
+				skirt = { lip = 700, thickness = 30, step = 400 },
+				materials = {
+					ice = Enum.Material.Glacier, snow = Enum.Material.Snow,
+					rock = Enum.Material.Rock, rockAlt = Enum.Material.Slate,
+					grass = Enum.Material.Grass, mud = Enum.Material.Mud,
+				},
+			},
 		},
 		{
 			id = "space_station", nameKey = "MAP_SPACE", price = 250000000, level = 40, payoutMult = 16,

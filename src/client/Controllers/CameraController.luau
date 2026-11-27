@@ -5,12 +5,13 @@ local State = require(script.Parent.Parent.State)
 local BikeController = require(script.Parent.BikeController)
 local RagdollController = require(script.Parent.RagdollController)
 local Ragdoll = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Logic.Ragdoll)
+local Ground = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Logic.Ground)
 
 local CameraController = {}
 
 local BASE = { distance = 18, height = 7, fov = 70 }
-local PER_SPEED = { distance = 0.035, height = 0.012, fov = 0.05 }
-local MAX_FOV_BONUS = 28
+local PER_SPEED = { distance = 0.015, height = 0.006, fov = 0.02 } -- how much speed pulls the camera back
+local MAX_FOV_BONUS = 12
 local SHAKE_DECAY = 6
 local CLEARANCE = 2
 local MAX_PITCH = 0.6 -- keeps the camera from looking straight up or down
@@ -38,7 +39,7 @@ end
 
 -- Pull the camera in front of any hill or wall between it and the rider.
 local function unblocked(focus, wanted)
-	rayParams.FilterDescendantsInstances = { workspace:FindFirstChild("World") }
+	rayParams.FilterDescendantsInstances = Ground.instances()
 	local hit = workspace:Raycast(focus, wanted - focus, rayParams)
 	return if hit then hit.Position + hit.Normal * CLEARANCE else wanted
 end
