@@ -6,12 +6,17 @@
 -- propAreas = where across the slope a prop may go: { from, to } studs from the centre line
 --   (either side); anything not listed can go anywhere.
 -- street = draw a road down the middle, pavements either side and houses along the outside.
+-- path = a brick-lined path winding down the landing slope (amplitude/wavelength in studs);
+--   props keep clear of it.
+-- hillTrees = prop keys planted along both sides of the mega ramp.
+-- Prop keys: the part-built props in World/Props and the textured meshes in Config/MeshProps.
 local P = require(script.Parent.Palette)
 
 local SPACING = 2000 -- studs between map centres on X (each force field box is 1620 wide)
 
-local function theme(ground, groundDark, ramp, kickerA, kickerB, rail)
-	return { ground = ground, groundDark = groundDark, ramp = ramp, kickerA = kickerA, kickerB = kickerB, rail = rail }
+-- material = surface texture for the ground (nil = smooth plastic)
+local function theme(ground, groundDark, ramp, kickerA, kickerB, rail, material)
+	return { ground = ground, groundDark = groundDark, ramp = ramp, kickerA = kickerA, kickerB = kickerB, rail = rail, material = material }
 end
 
 return {
@@ -26,8 +31,13 @@ return {
 			ramp = { angle = 32, length = 680, width = 44, thickness = 6 },
 			runout = 50, kicker = { radius = 80, endAngle = 40, segments = 10 }, gap = 50,
 			landing = { angle = 14, length = 1700, width = 420 },
-			theme = theme(P.Grass, P.GrassDark, P.Wood, P.Coral, P.Orange, P.Coral),
-			props = { trees = 40, benches = 13, hay = 18, rocks = 20, tables = 7, fences = 9 },
+			theme = theme(P.Grass, P.GrassDark, P.Wood, P.Coral, P.Orange, P.Coral, Enum.Material.Grass),
+			props = {
+				oakTrees = 14, firTrees = 10, bushes = 20, flowers = 36, parkBenches = 6,
+				picnicTables = 4, parkLamps = 6, swings = 2, jungleGyms = 2,
+			},
+			hillTrees = { "oakTrees", "firTrees" },
+			path = { width = 16, amplitude = 110, wavelength = 520, segment = 16, brick = 1.4 },
 		},
 		{
 			id = "skate_park", nameKey = "MAP_SKATE_PARK", price = 75000, level = 12, payoutMult = 2,
@@ -58,6 +68,7 @@ return {
 			landing = { angle = 14, length = 45900, width = 420 },
 			theme = theme(P.Snow, P.Stone, P.WoodDark, P.Sky, P.White, P.Sky),
 			props = { trees = 4, rocks = 4, crates = 1 },
+			hillTrees = { "trees" },
 		},
 		{
 			id = "space_station", nameKey = "MAP_SPACE", price = 250000000, level = 40, payoutMult = 16,

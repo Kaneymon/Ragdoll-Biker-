@@ -1,10 +1,12 @@
--- Cartoon map props built from simple shapes (the car is the Blender toy car mesh, kept in
--- ServerStorage.Assets.ToyCar). Each returns a Model pivoted at its base.
+-- Map props. Most are cartoon shapes built from parts; the car and the textured park props are
+-- Blender meshes kept in ServerStorage.Assets (see Config/MeshProps). Each returns a Model
+-- pivoted at its base.
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local P = require(ReplicatedStorage.Shared.Config.Palette)
 local Hazards = require(ReplicatedStorage.Shared.Config.Hazards)
+local MeshProps = require(ReplicatedStorage.Shared.Config.MeshProps)
 local Build = require(script.Parent.Build)
 
 local Props = {}
@@ -13,6 +15,20 @@ local BOUNCY = PhysicalProperties.new(0.7, 0.3, 1, 1, 100)
 
 local function finish(model)
 	model.WorldPivot = CFrame.new(0, 0, 0)
+	return model
+end
+
+-- A textured Blender prop (Config/MeshProps entry), randomly sized within its scale range.
+function Props.mesh(def, rng: Random)
+	local model = ServerStorage.Assets[MeshProps.folder][def.mesh]:Clone()
+	model:ScaleTo(model:GetScale() * rng:NextNumber(def.scale[1], def.scale[2])) -- relative to the stored size
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.CanCollide = def.collide
+			part.CanQuery = def.collide
+			part.CanTouch = false
+		end
+	end
 	return model
 end
 

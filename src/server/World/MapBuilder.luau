@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local P = require(Shared.Config.Palette)
 local Maps = require(Shared.Config.Maps)
+local MeshProps = require(Shared.Config.MeshProps)
 local MapGeometry = require(Shared.Logic.MapGeometry)
 local Build = require(script.Parent.Build)
 local Props = require(script.Parent.Props)
@@ -37,20 +38,26 @@ local PROP_BUILDERS = {
 	rails = { build = Props.grindRail },
 	launchRamps = { build = Props.launchRamp, facing = true },
 }
+for key, def in MeshProps.list do -- textured Blender props
+	PROP_BUILDERS[key] = { build = function(rng)
+		return Props.mesh(def, rng)
+	end, upright = def.upright }
+end
+local PATH_CLEARANCE = 8 -- props keep this far from the path's edge
 
 -- Fills the space under a straight line from (zA, yA) down to (zB, yB) with wedges on top and
 -- boxes below, down to floorY. Split so no piece is too big.
-local function fillUnder(model, name, x, width, zA, yA, zB, yB, floorY, color)
+local function fillUnder(model, name, x, width, zA, yA, zB, yB, floorY, color, material)
 	local steps = math.max(1, math.ceil(math.max(zB - zA, yA - yB) / CHUNK))
 	for i = 0, steps - 1 do
 		local z0, z1 = zA + (zB - zA) * i / steps, zA + (zB - zA) * (i + 1) / steps
 		local y0, y1 = yA + (yB - yA) * i / steps, yA + (yB - yA) * (i + 1) / steps
 		local depth, drop = z1 - z0, y0 - y1
 		if drop > 0.05 then
-			Build.part({ Name = name, Size = Vector3.new(width, drop, depth), CFrame = CFrame.new(x, y1 + drop / 2, (z0 + z1) / 2) * CFrame.Angles(0, math.pi, 0), Color = color, Parent = model }, "WedgePart")
+			Build.part({ Name = name, Size = Vector3.new(width, drop, depth), CFrame = CFrame.new(x, y1 + drop / 2, (z0 + z1) / 2) * CFrame.Angles(0, math.pi, 0), Color = color, Material = material, Parent = model }, "WedgePart")
 		end
 		if y1 - floorY > 0.05 then
-			Build.tiled({ Name = name, Size = Vector3.new(width, y1 - floorY, depth), CFrame = CFrame.new(x, (y1 + floorY) / 2, (z0 + z1) / 2), Color = color, Parent = model })
+			Build.tiled({ Name = name, Size = Vector3.new(width, y1 - floorY, depth), CFrame = CFrame.new(x, (y1 + floorY) / 2, (z0 + z1) / 2), Color = color, Material = material, Parent = model })
 		end
 	end
 end
@@ -67,8 +74,8 @@ local function buildRamp(def, g, model, floorY)
 		Build.tiled({ Name = "Rail", Size = Vector3.new(1.2, 3, ramp.length), CFrame = Build.onSurface(mid + x + g.normal * 1.5, g.normal), Color = theme.rail, Parent = model })
 	end
 	local hillWidth = ramp.width + HILL_MARGIN * 2
-	fillUnder(model, "Hill", g.origin.X, hillWidth, g.origin.Z, g.origin.Y - 0.4, g.bottom.Z, g.bottom.Y - 0.4, floorY, theme.ground)
-	fillUnder(model, "HillTop", g.origin.X, hillWidth, g.origin.Z - HILL_MARGIN, g.origin.Y - 0.4, g.origin.Z, g.origin.Y - 0.4, floorY, theme.ground)
+	fillUnder(model, "Hill", g.origin.X, hillWidth, g.origin.Z, g.origin.Y - 0.4, g.bottom.Z, g.bottom.Y - 0.4, floorY, theme.ground, theme.material)
+	fillUnder(model, "HillTop", g.origin.X, hillWidth, g.origin.Z - HILL_MARGIN, g.origin.Y - 0.4, g.origin.Z, g.origin.Y - 0.4, floorY, theme.ground, theme.material)
 	Build.part({ Name = "StartDeck", Size = Vector3.new(ramp.width, ramp.thickness, 30), CFrame = CFrame.new(g.origin + Vector3.new(0, -ramp.thickness / 2, -15)), Color = theme.ramp, Parent = model })
 end
 
@@ -96,11 +103,11 @@ local function buildGround(def, g, model, floorY)
 	local theme, width = def.theme, def.landing.width
 	local backZ, parkEnd = g.origin.Z - BACK_LENGTH, g.landEnd.Z + PARK_LENGTH
 	-- flat ground around the kicker, solid down to the floor
-	fillUnder(model, "Ground", g.origin.X, width, backZ, g.bottom.Y - 0.4, g.landStart.Z, g.bottom.Y - 0.4, floorY, theme.groundDark)
+	fillUnder(model, "Ground", g.origin.X, width, backZ, g.bottom.Y - 0.4, g.landStart.Z, g.bottom.Y - 0.4, floorY, theme.groundDark, theme.material)
 	-- the landing slope, solid down to the floor
-	fillUnder(model, "LandingHill", g.origin.X, width, g.landStart.Z, g.landStart.Y, g.landEnd.Z, g.landEnd.Y, floorY, theme.ground)
+	fillUnder(model, "LandingHill", g.origin.X, width, g.landStart.Z, g.landStart.Y, g.landEnd.Z, g.landEnd.Y, floorY, theme.ground, theme.material)
 	-- valley floor (also the park at the bottom of the slope)
-	Build.tiled({ Name = "Floor", Size = Vector3.new(width + FLOOR_MARGIN * 2, 20, parkEnd - backZ + FLOOR_MARGIN), CFrame = CFrame.new(g.origin.X, floorY - 10, (backZ + parkEnd) / 2), Color = theme.ground, Parent = model })
+	Build.tiled({ Name = "Floor", Size = Vector3.new(width + FLOOR_MARGIN * 2, 20, parkEnd - backZ + FLOOR_MARGIN), CFrame = CFrame.new(g.origin.X, floorY - 10, (backZ + parkEnd) / 2), Color = theme.ground, Material = theme.material, Parent = model })
 end
 
 -- Ground height along the map's centre line at a given z.
@@ -237,6 +244,43 @@ local function buildStreet(def, g, model, rng)
 	end
 end
 
+-- Centre of the winding path (x offset from the map's centre line) at a distance down the slope.
+local function pathX(path, along)
+	return path.amplitude * math.sin(along / path.wavelength * math.pi * 2)
+end
+
+-- A path winding down the landing slope, lined with bricks on both edges (visual only).
+local function buildPath(def, g, model)
+	local path = def.path
+	local folder = Build.model("Path", model)
+	-- a point on the centre line (side 0) or an edge (side -1/1), measured square to the path
+	local function point(along, side)
+		local slope = path.amplitude * math.pi * 2 / path.wavelength * math.cos(along / path.wavelength * math.pi * 2)
+		local length = math.sqrt(1 + slope * slope)
+		local x = pathX(path, along) + side * path.width / 2 / length
+		local down = along - side * path.width / 2 * slope / length
+		return g.landStart + g.landDown * down + Vector3.new(x, 0, 0)
+	end
+	local function strip(name, a, b, width, height, color, material)
+		local length = (b - a).Magnitude
+		local frame = CFrame.fromMatrix((a + b) / 2, g.landNormal:Cross((b - a).Unit).Unit, g.landNormal)
+		Build.decor({ Name = name, Size = Vector3.new(width, height, length + width * 0.6), CFrame = frame * CFrame.new(0, height / 2, 0), Color = color, Material = material, Parent = folder })
+	end
+	local steps = math.floor(def.landing.length / path.segment)
+	for i = 0, steps - 1 do
+		local a, b = i * path.segment, (i + 1) * path.segment
+		strip("PathStone", point(a, 0), point(b, 0), path.width, 0.3, P.PathStone, Enum.Material.Pebble)
+		for _, side in { -1, 1 } do
+			strip("Bricks", point(a, side), point(b, side), path.brick, path.brick * 0.6, P.Brick, Enum.Material.Brick)
+		end
+	end
+end
+
+local function nearPath(def, along, x)
+	return def.path ~= nil and along <= def.landing.length
+		and math.abs(x - pathX(def.path, along)) < def.path.width / 2 + PATH_CLEARANCE
+end
+
 local function placeProps(def, g, model)
 	local rng = Random.new(def.seed)
 	local folder = Build.model("Props", model)
@@ -254,6 +298,9 @@ local function placeProps(def, g, model)
 			local x = if area
 				then rng:NextNumber(area[1], math.min(area[2], half)) * (if rng:NextNumber() < 0.5 then -1 else 1)
 				else rng:NextNumber(-half, half)
+			if nearPath(def, along, x) then
+				continue
+			end
 			position += Vector3.new(x, 0, 0)
 			local normal = if onSlope and not builder.upright then g.landNormal else Vector3.yAxis
 			local turn = if builder.facing then 0 else rng:NextNumber(0, math.pi * 2)
@@ -262,13 +309,13 @@ local function placeProps(def, g, model)
 			prop.Parent = folder
 		end
 	end
-	-- trees along the sides of the mega ramp hill (hill_park style maps)
-	if def.props.trees then
-		for i = 1, 24 do
+	-- trees along the sides of the mega ramp hill
+	for i, key in def.hillTrees or {} do
+		for n = 1, 24 / #def.hillTrees do
 			local along = rng:NextNumber(40, def.ramp.length - 20)
-			local side = if i % 2 == 0 then 1 else -1
+			local side = if (n + i) % 2 == 0 then 1 else -1
 			local x = side * rng:NextNumber(def.ramp.width / 2 + 12, def.ramp.width / 2 + HILL_MARGIN - 5)
-			local tree = Props.tree(rng)
+			local tree = PROP_BUILDERS[key].build(rng, def.theme)
 			tree:PivotTo(CFrame.new(g.origin + g.down * along + Vector3.new(x, -0.6, 0)))
 			tree.Parent = folder
 		end
@@ -286,6 +333,9 @@ function MapBuilder.build(def, parent)
 	buildFences(def, g, model)
 	if def.street then
 		buildStreet(def, g, model, Random.new(def.seed + 1))
+	end
+	if def.path then
+		buildPath(def, g, model)
 	end
 	placeProps(def, g, model)
 	model.Parent = parent

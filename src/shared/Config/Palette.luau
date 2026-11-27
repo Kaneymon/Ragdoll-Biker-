@@ -28,4 +28,6 @@ return {
 	Snow = Color3.fromRGB(240, 246, 255),
 	SpaceFloor = Color3.fromRGB(60, 50, 95),
 	Paper = Color3.fromRGB(255, 251, 236),
+	PathStone = Color3.fromRGB(214, 196, 160),
+	Brick = Color3.fromRGB(176, 88, 66),
 }
