@@ -28,5 +28,9 @@ return {
 		grindRails = { folder = "Skate", mesh = "GrindRail", scale = { 1.4, 1.4 }, collide = true },
 		skateBenches = { folder = "Skate", mesh = "SkateBench", scale = { 1.3, 1.3 }, collide = true },
 		chainFence = { folder = "Skate", mesh = "ChainLinkFence", scale = { 1, 1 }, collide = true },
+
+		-- Walls across the bottom of the maps (tools/wall_props_blender.py, ids in assets/models/walls/README.md)
+		brickWall = { folder = "Walls", mesh = "BrickWall", scale = { 1.5, 1.5 }, collide = true },
+		brickColumn = { folder = "Walls", mesh = "BrickColumn", scale = { 1.5, 1.5 }, collide = true },
 	},
 }

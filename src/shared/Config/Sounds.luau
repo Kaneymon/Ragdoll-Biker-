@@ -17,7 +17,6 @@ return {
 	WindowOpen = { ids = ids("72774655718013"), volume = 0.5 }, -- UI Popup Open
 	WindowClose = { ids = ids("130418978017978"), volume = 0.5 }, -- UI Popup Close
 	Pedal = { ids = {}, volume = 0.4, loop = true },
-	Wind = { ids = ids("78670048950508"), volume = 0.5, loop = true }, -- Magic_Wind_Loop
 	Launch = { ids = ids("120617048502957"), volume = 0.5 }, -- Magic_Whoosh
 	Land = { ids = ids("130723557063484"), volume = 0.6 }, -- Arena_Skid
 	Crash = { ids = ids("117467964555413"), volume = 0.8 }, -- Battle_Impact_Heavy

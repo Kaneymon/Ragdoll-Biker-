@@ -20,6 +20,7 @@ local GearController = require(script.Parent.Parent.Controllers.GearController)
 local RagdollController = require(script.Parent.Parent.Controllers.RagdollController)
 local Ragdoll = require(Shared.Logic.Ragdoll)
 local UiKit = require(script.Parent.UiKit)
+local Window = require(script.Parent.Window)
 
 local Hud = {}
 
@@ -30,6 +31,7 @@ local TRICK_TOAST_TIME = 1.2
 local BAIL_LOOKAHEAD = 0.9
 local FADE = TweenInfo.new(0.4)
 local IN_RUN = { Riding = true, Air = true, Ragdoll = true }
+local PROMPT_ORDER = 30 -- the "press W to ride" prompt draws above menus and popups
 
 local ui = {}
 local rayParams = RaycastParams.new()
@@ -70,7 +72,7 @@ end
 local function buildCentre(gui)
 	ui.mult = UiKit.label(anchored({ text = "x1", style = "Huge", color = P.Sun, outline = true, Size = UDim2.fromOffset(400, 90), Position = UDim2.new(0.5, 0, 0, 20), Parent = gui }, 0.5, 0))
 	ui.trick = UiKit.label(anchored({ text = "", style = "Heading", color = P.White, outline = true, Size = UDim2.fromOffset(500, 44), Position = UDim2.new(0.5, 0, 0, 110), Parent = gui }, 0.5, 0))
-	ui.start = UiKit.label(anchored({ key = "HUD_START", style = "Title", color = P.White, outline = true, Size = UDim2.fromOffset(700, 60), Position = UDim2.fromScale(0.5, 0.7), Parent = gui }, 0.5, 0.5))
+	ui.start = UiKit.label(anchored({ key = "HUD_START", style = "Title", color = P.White, outline = true, Size = UDim2.fromOffset(700, 60), Position = UDim2.new(0.5, 0, 1, -24), Parent = UiKit.screen("StartPrompt", PROMPT_ORDER) }, 0.5, 1))
 	ui.bail = UiKit.panel(anchored({ Size = UDim2.fromOffset(620, 96), Position = UDim2.fromScale(0.5, 0.55), BackgroundColor3 = P.Coral, Visible = false, Parent = gui }, 0.5, 0.5))
 	ui.bailText = UiKit.label({ key = "HUD_BAIL", style = "Title", color = P.White, outline = true, Size = UDim2.fromScale(1, 1), Parent = ui.bail })
 	ui.toast = UiKit.panel(anchored({ Size = UDim2.fromOffset(520, 64), Position = UDim2.new(0.5, 0, 0, 160), BackgroundColor3 = P.Panel, Visible = false, Parent = gui }, 0.5, 0))
@@ -113,6 +115,9 @@ local function refreshProfile(profile)
 end
 
 local function refreshPhase(phase)
+	if phase == "Riding" then
+		Window.closeAll() -- riding off closes any open menu
+	end
 	ui.menu.Visible = phase == "Ready"
 	ui.start.Visible = phase == "Ready"
 	ui.speed.Visible = IN_RUN[phase] == true

@@ -15,7 +15,6 @@ local Feedback = {}
 
 local GROAN_CHANCE = 0.35
 local NOTICE_SOUNDS = { NOTE_BOUGHT = "Purchase", NOTE_NO_MONEY = "Error", NOTE_MAX = "Error", NOTE_ERROR = "Error" }
-local wind = nil
 local boost = { sound = nil, flame = nil }
 
 local function injuryFx()
@@ -88,10 +87,6 @@ local function onBoost(on)
 end
 
 local function onPhase(phase)
-	if not wind then
-		wind = Sfx.loop("Wind")
-	end
-	wind:set(phase == "Riding" or phase == "Air" or phase == "Ragdoll")
 	if phase == "Ready" or phase == "Ragdoll" then
 		clearBoost()
 	end

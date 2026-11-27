@@ -46,6 +46,7 @@ for key, def in MeshProps.list do -- textured Blender props
 end
 local PATH_CLEARANCE = 8 -- props keep this far from the path's edge
 local FOOTPRINT_SHARE = 0.75 -- how much of a prop's width counts when keeping props apart
+local END_WALL_INSET = 8 -- end wall / house fronts sit this far in front of the end fence
 
 -- Fills the space under a straight line from (zA, yA) down to (zB, yB) with wedges on top and
 -- boxes below, down to floorY. Split so no piece is too big.
@@ -261,6 +262,44 @@ local function buildDecals(def, g, model, rng)
 	end
 end
 
+-- Closes off the bottom of the park (Config/Maps endWall): brick wall sections with optional
+-- columns between them, or a row of house fronts facing up the hill. Solid, so riders hit it.
+local function buildEndWall(def, g, model)
+	local spec = def.endWall
+	local folder = Build.model("EndWall", model)
+	local half = def.landing.width / 2 - FENCE_INSET
+	local lineZ = g.landEnd.Z + PARK_LENGTH - FENCE_INSET - END_WALL_INSET
+	local rng = Random.new(def.seed + 3)
+	local function place(piece, x, depth)
+		piece:PivotTo(CFrame.new(Vector3.new(g.origin.X + x, g.landEnd.Y, lineZ - depth / 2)) * piece:GetPivot().Rotation)
+		piece.Parent = folder
+	end
+	local cursor = -half
+	if spec.houses then
+		while cursor < half do
+			local house = Props.house(rng)
+			house:PivotTo(CFrame.Angles(0, math.pi / 2, 0)) -- front door (+X) faces up the hill
+			local size = house:GetExtentsSize()
+			place(house, cursor + size.X / 2, size.Z)
+			cursor += size.X + 1
+		end
+		return
+	end
+	local function column(x)
+		if spec.column then
+			place(PROP_BUILDERS[spec.column].build(rng), x, 0)
+		end
+	end
+	column(cursor)
+	while cursor < half do
+		local wall = PROP_BUILDERS[spec.wall].build(rng)
+		local length = wall:GetExtentsSize().X
+		place(wall, cursor + length / 2, 0)
+		cursor += length
+		column(cursor)
+	end
+end
+
 -- Streets: road down the middle with dashed centre line, pavements either side, houses outside.
 local function buildStreet(def, g, model, rng)
 	local street = def.street
@@ -411,6 +450,9 @@ function MapBuilder.build(def, parent)
 	end
 	if def.decals then
 		buildDecals(def, g, model, Random.new(def.seed + 2))
+	end
+	if def.endWall then
+		buildEndWall(def, g, model)
 	end
 	placeProps(def, g, model)
 	model.Parent = parent

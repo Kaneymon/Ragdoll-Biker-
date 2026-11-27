@@ -13,6 +13,8 @@
 -- propGap = extra studs kept between props. fenceMesh = Config/MeshProps key used for the
 --   perimeter fence (one segment every `length` studs) instead of plain rails.
 -- decals = images from Config/Decals scattered on the floor ({ set, count, size, area }).
+-- endWall = what closes off the bottom of the park: { wall = MeshProps key, column = MeshProps key
+--   between sections (optional) } or { houses = true } for a row of house fronts.
 -- Prop keys: the part-built props in World/Props and the textured meshes in Config/MeshProps.
 local P = require(script.Parent.Palette)
 
@@ -41,6 +43,7 @@ return {
 				picnicTables = 4, parkLamps = 6, swings = 2, jungleGyms = 2,
 			},
 			hillTrees = { "oakTrees", "firTrees" },
+			endWall = { wall = "brickWall", column = "brickColumn" },
 			path = { start = 40, width = 16, amplitude = 110, wavelength = 520, segment = 16, brick = 1.4 },
 		},
 		{
@@ -66,6 +69,7 @@ return {
 			propGap = 18,
 			fenceMesh = { key = "chainFence", length = 11.5 },
 			decals = { set = "graffiti", count = 45, size = 34, area = { 0, 120 } },
+			endWall = { wall = "brickWall" },
 		},
 		{
 			id = "streets", nameKey = "MAP_STREETS", price = 2500000, level = 20, payoutMult = 4,
@@ -77,6 +81,7 @@ return {
 			props = { cars = 8, lamps = 8, crates = 4, benches = 4 },
 			propAreas = { cars = { 0, 95 }, lamps = { 115, 145 }, crates = { 115, 145 }, benches = { 115, 145 } },
 			street = { road = 220, pavement = 40, laneDash = 30, houseX = 180, houseSpacing = 75 },
+			endWall = { houses = true },
 		},
 		{
 			id = "mountain", nameKey = "MAP_MOUNTAIN", price = 25000000, level = 30, payoutMult = 8,
