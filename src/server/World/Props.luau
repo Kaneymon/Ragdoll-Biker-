@@ -64,13 +64,6 @@ function Props.picnicTable()
 	return finish(model)
 end
 
-function Props.bouncer()
-	local model = Build.model("Bouncer")
-	Build.part({ Name = "Pad", Shape = Enum.PartType.Cylinder, Size = Vector3.new(2, 16, 16), CFrame = CFrame.new(0, 1, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = P.Coral, CustomPhysicalProperties = BOUNCY, Parent = model })
-	Build.part({ Name = "Ring", Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.6, 17, 17), CFrame = CFrame.new(0, 0.6, 0) * CFrame.Angles(0, 0, math.rad(90)), Color = P.Sky, Parent = model })
-	return finish(model)
-end
-
 function Props.fence(rng: Random)
 	local model = Build.model("Fence")
 	local posts = rng:NextInteger(4, 8)

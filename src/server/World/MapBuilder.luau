@@ -31,7 +31,6 @@ local PROP_BUILDERS = {
 	benches = { build = Props.bench },
 	hay = { build = Props.hay },
 	tables = { build = Props.picnicTable },
-	bouncers = { build = Props.bouncer },
 	fences = { build = Props.fence },
 	crates = { build = Props.crate },
 	cars = { build = Props.car },
