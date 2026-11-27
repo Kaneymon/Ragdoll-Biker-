@@ -148,14 +148,14 @@ local function stepGround(dt)
 		return
 	end
 
-	local accel = -workspace.Gravity * Bike.GravityScale * forward.Y - Bike.RollingDrag - Bike.AirDrag * ride.speed ^ 2
+	local accel = -State.gravity * Bike.GravityScale * forward.Y - Bike.RollingDrag - Bike.AirDrag * ride.speed ^ 2
 	if move.Z < -0.1 and ride.speed < State.stats.cycleSpeed then
-		accel += Bike.PedalAccel * -move.Z
+		accel += Bike.PedalAccel * State.stats.speedMult * -move.Z
 	elseif move.Z > 0.1 then
 		accel -= Bike.BrakeDecel * move.Z
 	end
 	accel += BikeController.boostAccel
-	ride.speed = math.clamp(ride.speed + accel * dt, 0, Bike.MaxSpeed)
+	ride.speed = math.clamp(ride.speed + accel * dt, 0, Bike.MaxSpeed * State.stats.speedMult)
 
 	ride.chassis.AssemblyLinearVelocity = forward * ride.speed + n * (Bike.Hover - hit.Distance) * Bike.Spring
 	ride.align.CFrame = CFrame.lookAt(Vector3.zero, forward, n)

@@ -10,7 +10,7 @@ local UI = Client.UI
 
 Localize.init()
 
-for _, name in { "Input", "BikeController", "TrickController", "RagdollController", "DamageDetector", "GearController", "HazardController", "CameraController" } do
+for _, name in { "Input", "BikeController", "TrickController", "RagdollController", "DamageDetector", "GearController", "HazardController", "CameraController", "RobuxEffects" } do
 	require(Controllers[name]).start()
 end
 require(Client.Feedback.Feedback).start()
@@ -23,6 +23,7 @@ local windows = {
 require(UI.Hud).create(windows)
 require(UI.PayoutSheet).create()
 require(UI.OfferPopup).create(windows)
+require(UI.GravitySlider).create()
 
 -- Last: starts receiving the profile and the character's bike.
 require(Controllers.Session).start()

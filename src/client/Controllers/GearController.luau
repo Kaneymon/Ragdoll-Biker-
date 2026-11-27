@@ -48,7 +48,9 @@ local function step(dt)
 	if not on then
 		return
 	end
-	fuel = math.max(0, fuel - dt)
+	if not State.stats.endlessBoost then
+		fuel = math.max(0, fuel - dt)
+	end
 	if State.phase == "Ragdoll" then
 		local core = corePart()
 		local direction = core and core.AssemblyLinearVelocity

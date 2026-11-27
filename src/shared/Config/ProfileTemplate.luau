@@ -9,8 +9,9 @@ return {
 	exploders = { owned = {}, charges = {}, equipped = "" }, -- charges: id -> bombs per run
 	biker = { helmet = 0, kneepads = 0, bodyarmour = 0, boots = 0 },
 	maps = { owned = { hill_park = true }, selected = "hill_park" },
-	passes = {}, -- Robux gamepasses: id -> enabled (not wired yet)
-	settings = { sfx = true, vfx = true, injuryFx = true, testMode = false },
+	passes = {}, -- Robux gamepasses (Config/Store): id -> switched on
+	powerups = {}, -- Robux power-ups: id -> os.time() when it runs out
+	settings = { sfx = true, vfx = true, injuryFx = true, testMode = false, gravity = 1 }, -- gravity = Gravity Controller slider
 	stats = {
 		totalRuns = 0,
 		totalDistance = 0,

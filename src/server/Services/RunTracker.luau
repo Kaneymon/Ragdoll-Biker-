@@ -60,7 +60,7 @@ end
 
 local function buildSheet(player, run)
 	local profile = DataService.get(player)
-	local stats = Progression.stats(profile)
+	local stats = Progression.stats(profile, os.time())
 	local map = Progression.map(profile.maps.selected)
 	local multiplier = TrickScore.multiplier(run.tricks, stats.trickBonus, run.ragdollTricks)
 	local summary = InjuryModel.summary(run.report, multiplier, map.payoutMult)
@@ -78,7 +78,8 @@ local function buildSheet(player, run)
 		lucky = summary.lucky,
 		multiplier = multiplier,
 		mapMult = map.payoutMult,
-		total = math.min(summary.total, Economy.MaxPayoutPerRun),
+		moneyMult = stats.payoutMult, -- 2x Money pass (and the 2x MONEY button, see doublePayout)
+		total = math.min(summary.total, Economy.MaxPayoutPerRun) * stats.payoutMult,
 		bonesHurt = summary.bonesHurt,
 		statuses = summary.statuses,
 		injuryCount = summary.injuryCount,
@@ -109,7 +110,9 @@ local function onBail(player, trickIds, maxSpeed)
 	run.tricks = validTricks(trickIds)
 	run.maxSpeed = if type(maxSpeed) == "number" then math.clamp(maxSpeed, 0, Bike.MaxSpeed * 2) else 0
 	run.bailPos = corePosition(player)
-	run.bonesPerHit = Progression.stats(DataService.get(player)).bonesPerHit
+	local stats = Progression.stats(DataService.get(player), os.time())
+	run.bonesPerHit = stats.bonesPerHit
+	run.endlessBones = stats.endlessBones
 	run.spentEnough = ShopService.spentEnough(player)
 	BikeService.detach(player)
 	task.delay(SERVER_REST_TIMEOUT, function()
@@ -142,7 +145,7 @@ local function onImpacts(player, batch)
 		end
 		if type(impact) == "table" and type(impact.part) == "string" and type(impact.speed) == "number" and impact.speed == impact.speed then
 			local speed = math.clamp(impact.speed, 0, Bike.MaxSpeed * 4)
-			local result = InjuryModel.applyImpact(run.report, impact.part, speed, run.bonesPerHit)
+			local result = InjuryModel.applyImpact(run.report, impact.part, speed, run.bonesPerHit, run.endlessBones)
 			if result and impact.kind == nil then -- only real hits set records and roll lucky hits
 				rollLucky(player, run, speed, result)
 			end
@@ -187,6 +190,19 @@ local function onCashOut(player)
 	end
 	task.defer(player.LoadCharacter, player)
 	return true, sheet.total
+end
+
+-- The 2x MONEY button: doubles the payout on the sheet the player is looking at (once per run).
+function RunTracker.doublePayout(player)
+	local run = runs[player]
+	if not run or run.phase ~= "Payout" or run.sheet.doubled then
+		return false
+	end
+	run.sheet.doubled = true
+	run.sheet.total *= 2
+	run.sheet.moneyMult *= 2
+	Net.event("PayoutReady"):FireClient(player, run.sheet)
+	return true
 end
 
 function RunTracker.start()

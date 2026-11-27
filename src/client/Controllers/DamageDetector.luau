@@ -42,7 +42,7 @@ end
 
 -- Scores one hurt and queues it for the server. kind = nil (hit), "contact" or "blast".
 local function hurt(part, speed, kind)
-	local result = InjuryModel.applyImpact(State.run.report, part.Name, speed, State.stats.bonesPerHit)
+	local result = InjuryModel.applyImpact(State.run.report, part.Name, speed, State.stats.bonesPerHit, State.stats.endlessBones)
 	if result then
 		table.insert(pending, { part = part.Name, speed = speed, kind = kind })
 		State.Impact:Fire(part, speed, result, kind)
@@ -102,7 +102,7 @@ local function step(dt)
 	if State.phase ~= "Ragdoll" then
 		return
 	end
-	local gravityStep = Vector3.new(0, -workspace.Gravity * dt, 0)
+	local gravityStep = Vector3.new(0, -State.gravity * dt, 0)
 	local now = os.clock()
 	for _, part in parts do
 		checkHit(part, gravityStep, now, dt)

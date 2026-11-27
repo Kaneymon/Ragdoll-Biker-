@@ -114,7 +114,7 @@ function BikeService.detach(player)
 	end
 	if character then
 		local profile = DataService.get(player)
-		Ragdoll.enable(character, Ragdoll.surface(Progression.stats(profile)))
+		Ragdoll.enable(character, Ragdoll.surface(Progression.stats(profile, os.time())))
 	end
 end
 

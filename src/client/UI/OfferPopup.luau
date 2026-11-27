@@ -24,9 +24,22 @@ for _, tab in Store.tabs do
 end
 
 local function show()
-	current = allItems[math.random(1, #allItems)]
+	local choices = {}
+	for _, item in allItems do
+		if not StoreWindow.owns(item) then
+			table.insert(choices, item)
+		end
+	end
+	if #choices == 0 then
+		return
+	end
+	current = choices[math.random(1, #choices)]
 	UiKit.setText(dealLabel, "OFFER_ITEM", Localize.get(current.nameKey))
-	UiKit.setText(buyButton, "BTN_ROBUX", current.robux)
+	if StoreWindow.isTesting() then
+		UiKit.setText(buyButton, "BTN_FREE")
+	else
+		UiKit.setText(buyButton, "BTN_ROBUX", current.robux)
+	end
 	root.Visible = true
 	UiKit.pop(root)
 end
@@ -48,7 +61,9 @@ function OfferPopup.create(windows)
 	maxSize.Parent = dealLabel
 
 	buyButton = UiKit.button({ key = "BTN_ROBUX", args = { 0 }, color = P.Money, style = "Title", Size = UDim2.new(0.86, 0, 0, 70), Position = UDim2.new(0.5, 0, 0, 225), AnchorPoint = Vector2.new(0.5, 0.5), Parent = root, onClick = function()
-		StoreWindow.prompt(current.id)
+		if StoreWindow.prompt(current.id) then
+			hide()
+		end
 	end })
 	UiKit.button({ key = "BTN_UPGRADES", color = P.Orange, style = "Heading", Size = UDim2.new(0.42, 0, 0, 56), Position = UDim2.new(0.28, 0, 0, 310), AnchorPoint = Vector2.new(0.5, 0.5), Parent = root, onClick = function()
 		hide()

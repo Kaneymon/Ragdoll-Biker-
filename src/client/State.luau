@@ -15,11 +15,13 @@ local State = {
 	phase = "Loading",
 	profile = nil,
 	stats = nil, -- all upgrade stats (bike + biker)
+	gravity = workspace.Gravity, -- this rider's gravity (studs/s^2), see Controllers/RobuxEffects
 	character = nil,
 	run = nil,
 
 	PhaseChanged = Signal.new(), -- (phase, previous)
 	ProfileChanged = Signal.new(), -- (profile)
+	StatsChanged = Signal.new(), -- (stats) upgrades, passes or power-ups changed
 	RunReset = Signal.new(),
 	Launched = Signal.new(), -- left the ground
 	Landed = Signal.new(), -- (impactSpeed)
@@ -48,9 +50,15 @@ function State.isRiding()
 	return State.phase == "Riding" or State.phase == "Air"
 end
 
+-- Upgrade stats plus whatever Robux passes / power-ups are running right now.
+function State.refreshStats()
+	State.stats = Progression.stats(State.profile, workspace:GetServerTimeNow())
+	State.StatsChanged:Fire(State.stats)
+end
+
 function State.setProfile(profile)
 	State.profile = profile
-	State.stats = Progression.stats(profile)
+	State.refreshStats()
 	State.ProfileChanged:Fire(profile)
 end
 

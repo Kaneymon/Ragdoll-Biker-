@@ -46,12 +46,22 @@ function renderers.stats(window)
 end
 
 function renderers.passes(window)
-	local passes = Store.tabs[1]
-	for i, item in passes.items do
+	local passes = {}
+	for _, tab in Store.tabs do
+		for _, item in tab.items do
+			if item.pass then
+				table.insert(passes, item)
+			end
+		end
+	end
+	for i, item in passes do
 		local owned = State.profile.passes[item.id] ~= nil
+		local on = State.profile.passes[item.id] == true
 		local button = if owned
-			then { if State.profile.passes[item.id] then "BTN_ON" else "BTN_OFF", color = P.Grape }
-			else { "BTN_ROBUX", { item.robux }, color = P.Money, onClick = function()
+			then { if on then "BTN_ON" else "BTN_OFF", color = if on then P.Money else P.Coral, onClick = function()
+				Net.func("TogglePass"):InvokeServer(item.id)
+			end }
+			else { if StoreWindow.isTesting() then "BTN_FREE" else "BTN_ROBUX", { item.robux }, color = P.Money, onClick = function()
 				StoreWindow.prompt(item.id)
 			end }
 		Card.new(window.body, { title = { item.nameKey }, buttons = { button }, order = i })

@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local P = require(Shared.Config.Palette)
 local Economy = require(Shared.Config.Economy)
+local Store = require(Shared.Config.Store)
 local Bones = require(Shared.Config.Bones)
 local Assets = require(Shared.Config.UiAssets)
 local InjuryModel = require(Shared.Logic.InjuryModel)
@@ -20,10 +21,10 @@ local StoreWindow = require(script.Parent.StoreWindow)
 local PayoutSheet = {}
 
 local ROW_HEIGHT = 30
-local TOTALS_HEIGHT = 150
+local TOTALS_HEIGHT = 180
 local BUTTONS_HEIGHT = 140
 
-local root, list, totals, setBones, bonesLabel, cashButton
+local root, list, totals, setBones, bonesLabel, cashButton, doubleButton
 
 -- One form line: "- name" on the left, value on the right (green for money).
 local function line(parent, order, text, value, valueColor, style)
@@ -71,7 +72,12 @@ local function show(sheet)
 	line(totals, 1, Localize.get("PAY_BILL"), Format.money(sheet.bill), P.Money)
 	line(totals, 2, Localize.get("PAY_TRICKS"), "x" .. Format.mult(sheet.multiplier))
 	line(totals, 3, Localize.get("PAY_MAP"), "x" .. Format.mult(sheet.mapMult))
-	line(totals, 4, Localize.get("PAY_TOTAL"), Format.money(sheet.total), P.Money, "Heading")
+	if sheet.moneyMult > 1 then -- 2x Money pass / 2x MONEY button
+		line(totals, 4, Localize.get("PAY_MONEY_BONUS"), "x" .. Format.mult(sheet.moneyMult))
+	end
+	line(totals, 5, Localize.get("PAY_TOTAL"), Format.money(sheet.total), P.Money, "Heading")
+	doubleButton.Visible = not sheet.doubled
+	UiKit.setText(doubleButton, if StoreWindow.isTesting() then "BTN_DOUBLE_FREE" else "BTN_DOUBLE", Economy.DoubleMoneyRobux)
 	cashButton:SetAttribute("Disabled", false)
 	root.Visible = true
 	UiKit.pop(root)
@@ -130,8 +136,8 @@ function PayoutSheet.create()
 	UiKit.listLayout(totals, nil, 2, Enum.HorizontalAlignment.Left)
 
 	cashButton = UiKit.button({ key = "BTN_CASH_OUT", color = P.Money, style = "Title", Size = UDim2.new(0.55, 0, 0, 72), Position = UDim2.new(0.5, 0, 1, -96), AnchorPoint = Vector2.new(0.5, 0.5), Parent = root, onClick = cashOut })
-	UiKit.button({ key = "BTN_DOUBLE", args = { Economy.DoubleMoneyRobux }, color = P.Sky, style = "Body", Size = UDim2.new(0.45, 0, 0, 50), Position = UDim2.new(0.5, 0, 1, -34), AnchorPoint = Vector2.new(0.5, 0.5), Parent = root, onClick = function()
-		StoreWindow.prompt("double_payout")
+	doubleButton = UiKit.button({ key = "BTN_DOUBLE", args = { Economy.DoubleMoneyRobux }, color = P.Sky, style = "Body", Size = UDim2.new(0.45, 0, 0, 50), Position = UDim2.new(0.5, 0, 1, -34), AnchorPoint = Vector2.new(0.5, 0.5), Parent = root, onClick = function()
+		StoreWindow.prompt(Store.DoublePayoutId)
 	end })
 
 	State.Payout:Connect(show)

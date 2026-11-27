@@ -93,9 +93,10 @@ local function pickBones(partName, count, seed)
 	return chosen
 end
 
--- bonesPerHit scales how many bones each hit reaches (Boots upgrade).
--- Returns what happened, or nil if the hit was too soft or the part is unknown.
-function InjuryModel.applyImpact(report, partName, speedChange, bonesPerHit)
+-- bonesPerHit scales how many bones each hit reaches (Boots upgrade); endless = the Endless Bone
+-- Breaks pass (bones never get harder to hurt). Returns what happened, or nil if the hit was too
+-- soft or the part is unknown.
+function InjuryModel.applyImpact(report, partName, speedChange, bonesPerHit, endless)
 	local region = Bones.regions[partName]
 	if not region or report.impacts >= T.MaxImpacts then
 		return nil
@@ -111,7 +112,7 @@ function InjuryModel.applyImpact(report, partName, speedChange, bonesPerHit)
 
 	local count = math.max(1, math.floor((1 + mph / T.MphPerExtraBone) * (bonesPerHit or 1)))
 	local hitBones = pickBones(partName, count, report.impacts * 7919 + #partName * 104729)
-	local boneMph = mph * InjuryModel.boneScale(report.hurt)
+	local boneMph = mph * (if endless then 1 else InjuryModel.boneScale(report.hurt))
 	for _, bone in hitBones do
 		local before = report.bones[bone] or 0
 		local after = math.min(T.DustMph, before + boneMph)

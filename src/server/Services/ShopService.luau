@@ -9,6 +9,7 @@ local Progression = require(Shared.Logic.Progression)
 local Template = require(Shared.Config.ProfileTemplate)
 local Economy = require(Shared.Config.Economy)
 local Injuries = require(Shared.Config.Injuries)
+local Store = require(Shared.Config.Store)
 local Net = require(Shared.Net)
 local DataService = require(script.Parent.DataService)
 
@@ -29,8 +30,14 @@ local function canTest(player)
 		or table.find(rules.userIds, player.UserId) ~= nil
 end
 
+-- Test mode: everything free and unlocked, for players allowed to test (Economy.TestMode).
+local function testing(player, profile)
+	return Progression.testMode(profile) and canTest(player)
+end
+
+-- No money price: test mode, or the Endless Money pass.
 local function isFree(profile)
-	return Progression.testMode(profile) and buyer ~= nil and canTest(buyer)
+	return buyer ~= nil and (testing(buyer, profile) or Progression.stats(profile, os.time()).freeShopping)
 end
 
 local function trackSpend(profile, cost)
@@ -126,7 +133,7 @@ local purchases = {
 		if def.comingSoon then
 			return "NOTE_SOON"
 		end
-		if Progression.level(profile.totalEarned) < def.level and not isFree(profile) then
+		if Progression.level(profile.totalEarned) < def.level and not testing(buyer, profile) then
 			return "NOTE_NEED_LEVEL"
 		end
 		return charge(profile, def.price, function()
@@ -181,13 +188,19 @@ local function onSelectMap(player, id)
 	return true
 end
 
+local SETTING_RANGES = { gravity = Store.GravityRange } -- number settings are clamped to these
+
 local function onSetSetting(player, settingKey, value)
 	local profile = DataService.get(player)
-	if not profile or type(settingKey) ~= "string" or type(Template.settings[settingKey]) ~= type(value) then
+	if not profile or type(settingKey) ~= "string" or type(Template.settings[settingKey]) ~= type(value) or value ~= value then
 		return false
 	end
 	if settingKey == "testMode" and value and not canTest(player) then
 		return false
+	end
+	local range = SETTING_RANGES[settingKey]
+	if range then
+		value = math.clamp(value, range.min, range.max)
 	end
 	profile.settings[settingKey] = value
 	DataService.push(player)
@@ -198,6 +211,12 @@ end
 function ShopService.spentEnough(player)
 	local record = spending[player]
 	return record ~= nil and record.base > 0 and record.spent >= record.base * Injuries.Lucky.SpendShare
+end
+
+-- True when the player is in test mode and allowed to be (Robux items are free then too).
+function ShopService.testing(player)
+	local profile = DataService.get(player)
+	return profile ~= nil and testing(player, profile)
 end
 
 -- A payout starts a fresh spending count.

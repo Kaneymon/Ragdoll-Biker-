@@ -51,7 +51,7 @@ local function moneyButton(cost, onClick, key)
 	if not cost then
 		return { "BTN_MAX", color = P.Disabled, disabled = true }
 	end
-	if Progression.testMode(State.profile) then
+	if Progression.testMode(State.profile) or State.stats.freeShopping then
 		return { key or "HUD_MONEY", { Localize.get("BTN_FREE") }, color = P.Grape, onClick = onClick }
 	end
 	return { key or "HUD_MONEY", { Format.money(cost) }, color = P.Money, onClick = onClick, disabled = State.profile.money < cost }

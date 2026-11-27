@@ -8,6 +8,7 @@ local Boosters = require(Config.Boosters)
 local Exploders = require(Config.Exploders)
 local Economy = require(Config.Economy)
 local Maps = require(Config.Maps)
+local Store = require(Config.Store)
 
 local Progression = {}
 
@@ -48,8 +49,57 @@ function Progression.statValue(set, def, level)
 	return SETS[set].base[def.stat] + def.perLevel * level
 end
 
--- Every upgradable stat (bike and biker) for a profile, in one table.
-function Progression.stats(profile)
+-- Robux items ------------------------------------------------------------------
+local storeItems = {}
+for _, tab in Store.tabs do
+	for _, item in tab.items do
+		storeItems[item.id] = item
+	end
+end
+
+function Progression.storeItem(id)
+	return storeItems[id]
+end
+
+-- Seconds left on a power-up (0 = not running). now = os.time() on the server,
+-- workspace:GetServerTimeNow() on the client.
+function Progression.powerupLeft(profile, id, now)
+	return math.max(0, (profile.powerups[id] or 0) - now)
+end
+
+-- Everything the player's switched-on passes and running power-ups do (see Config/Store).
+function Progression.effects(profile, now)
+	local effects = { payoutMult = 1, gravityMult = 1, speedMult = 1, trickSpeedMult = 1 }
+	local function add(item)
+		for key, value in item.effects do
+			effects[key] = if type(value) == "number" then effects[key] * value else value
+		end
+	end
+	for id, on in profile.passes do
+		local item = storeItems[id]
+		if on and item and item.effects then
+			add(item)
+		end
+	end
+	for id in profile.powerups do
+		local item = storeItems[id]
+		if item and item.effects and Progression.powerupLeft(profile, id, now) > 0 then
+			add(item)
+		end
+	end
+	return effects
+end
+
+-- Gravity multiplier: the Gravity Controller slider (if on) times any gravity power-up.
+function Progression.gravity(profile, effects)
+	local range = Store.GravityRange
+	local slider = if effects.gravityControl then math.clamp(profile.settings.gravity, range.min, range.max) else 1
+	return slider * effects.gravityMult
+end
+
+-- Every upgradable stat (bike and biker) for a profile, in one table, with the Robux effects
+-- folded in (now: see powerupLeft).
+function Progression.stats(profile, now)
 	local stats = {}
 	for set, info in SETS do
 		for stat, value in info.base do
@@ -59,6 +109,16 @@ function Progression.stats(profile)
 			stats[def.stat] = Progression.statValue(set, def, profile[set][def.id] or 0)
 		end
 	end
+	local effects = Progression.effects(profile, now)
+	stats.trickSpeed *= effects.trickSpeedMult
+	stats.cycleSpeed *= effects.speedMult
+	stats.speedMult = effects.speedMult
+	stats.payoutMult = effects.payoutMult
+	stats.endlessBones = effects.endlessBones == true
+	stats.endlessBoost = effects.endlessBoost == true
+	stats.gravityControl = effects.gravityControl == true
+	stats.freeShopping = effects.freeShopping == true
+	stats.gravity = Progression.gravity(profile, effects)
 	return stats
 end
 

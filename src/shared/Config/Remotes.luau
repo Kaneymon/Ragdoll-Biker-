@@ -18,5 +18,6 @@ return {
 		"SetSetting",
 		"CashOut",
 		"PromptRobux",
+		"TogglePass", -- switch an owned gamepass on/off
 	},
 }
