@@ -57,6 +57,10 @@ local function land(hit)
 		ride.speed = math.max(0, velocity:Dot(look.Unit))
 		ride.align.CFrame = CFrame.lookAt(Vector3.zero, look.Unit, n)
 		ride.align.Enabled = true
+		-- sit the bike at ride height (a fast fall would otherwise sink into the deck this frame),
+		-- then the suspension takes the hit and bounces back up
+		chassis.CFrame += n * (Bike.Hover - (chassis.Position - hit.Position):Dot(n))
+		chassis.AssemblyLinearVelocity = planar
 		ride.bounce = 0
 		ride.bounceSpeed = math.min(-velocity:Dot(n) * Bike.LandBounce.share, Bike.LandBounce.max)
 		State.setPhase("Riding")
@@ -143,7 +147,7 @@ end
 
 local function stepGround(dt)
 	local hit = cast(-ride.chassis.CFrame.UpVector, Bike.RayLength)
-	if not hit or hit.Distance > Bike.Hover + LEAVE_MARGIN then
+	if not hit or hit.Distance > Bike.Hover + math.max(ride.bounce, 0) + LEAVE_MARGIN then
 		local kicker = ride.groundPart and ride.groundPart:GetAttribute("Launch")
 		leaveGround(if kicker then ride.normal else nil, kicker)
 		return

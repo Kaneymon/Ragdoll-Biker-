@@ -1,5 +1,6 @@
 -- Modal window with a title, close button, optional tab row and a single-column scroll list.
--- Only one window is open at a time. Window.Opened fires when any window opens (popups close).
+-- Only one window is open at a time. Window.Opened fires when any window opens and
+-- Window.AllClosed when everything is closed at once (popups close on both).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -10,7 +11,7 @@ local Sfx = require(Shared.Services.Sfx)
 local Signal = require(Shared.Util.Signal)
 local UiKit = require(script.Parent.UiKit)
 
-local Window = { Opened = Signal.new() }
+local Window = { Opened = Signal.new(), AllClosed = Signal.new() }
 Window.__index = Window
 
 local TITLE_HEIGHT = 70
@@ -132,6 +133,7 @@ function Window.closeAll()
 	if openWindow then
 		openWindow:close()
 	end
+	Window.AllClosed:Fire()
 end
 
 return Window

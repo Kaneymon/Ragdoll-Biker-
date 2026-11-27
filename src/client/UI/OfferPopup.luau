@@ -86,6 +86,7 @@ function OfferPopup.create(windows)
 		end
 	end)
 	Window.Opened:Connect(hide) -- any menu (Upgrades, Store, Settings) replaces the popup
+	Window.AllClosed:Connect(hide)
 end
 
 return OfferPopup
