@@ -163,8 +163,7 @@ local Text = {
 	PAY_LUCKY_LINE = "{1} x{2}",
 
 	-- Offer popup
-	OFFER_DEAL = "{1}% OFF {2}!",
-	OFFER_DEAL_MEGA = "MEGA DEAL! {1}% OFF {2}!",
+	OFFER_ITEM = "{1}!",
 	BTN_PLAY = "PLAY",
 
 	-- Store items
