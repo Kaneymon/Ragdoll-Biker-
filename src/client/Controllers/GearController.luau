@@ -42,7 +42,7 @@ end
 
 local function step(dt)
 	local stats = State.profile and Progression.equippedBooster(State.profile)
-	local on = stats ~= nil and fuel > 0 and BOOST_PHASES[State.phase] == true and Input.isDown("Boost")
+	local on = stats ~= nil and fuel > 0 and BOOST_PHASES[State.phase] == true and State.rules().gear and Input.isDown("Boost")
 	setBoosting(on, stats)
 	BikeController.boostAccel = if on and State.isRiding() then stats.thrust else 0
 	if not on then
@@ -64,7 +64,7 @@ end
 local function explode()
 	local force = State.profile and Progression.equippedExploder(State.profile)
 	local part = corePart()
-	if not force or bombsLeft <= 0 or not part or not BOOST_PHASES[State.phase] then
+	if not force or bombsLeft <= 0 or not part or not BOOST_PHASES[State.phase] or not State.rules().gear then
 		return
 	end
 	bombsLeft -= 1

@@ -9,6 +9,7 @@ local Exploders = require(Config.Exploders)
 local Economy = require(Config.Economy)
 local Maps = require(Config.Maps)
 local Store = require(Config.Store)
+local Cosmetics = require(Config.Cosmetics)
 
 local Progression = {}
 
@@ -47,6 +48,26 @@ end
 
 function Progression.statValue(set, def, level)
 	return SETS[set].base[def.stat] + def.perLevel * level
+end
+
+-- Rewards that grow with level: spec = { base, perLevel } (AFK corner, obby finish).
+function Progression.levelReward(spec, profile)
+	return spec.base + spec.perLevel * Progression.level(profile.totalEarned)
+end
+
+-- Paints & trails (Config/Cosmetics) ------------------------------------------
+function Progression.cosmetics(kind)
+	return Cosmetics[kind]
+end
+
+function Progression.cosmetic(kind, id)
+	local list = Cosmetics[kind]
+	return list and find(list, id)
+end
+
+-- The equipped paint / trail def of a profile (trail: nil when none).
+function Progression.equippedCosmetic(profile, kind)
+	return Progression.cosmetic(kind, profile[kind].equipped)
 end
 
 -- Robux items ------------------------------------------------------------------

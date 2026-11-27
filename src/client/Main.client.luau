@@ -19,11 +19,13 @@ local windows = {
 	upgrades = require(UI.UpgradesWindow).create(),
 	store = require(UI.StoreWindow).create(),
 	settings = require(UI.SettingsWindow).create(),
+	garage = require(UI.GarageWindow).create(),
 }
 require(UI.Hud).create(windows)
 require(UI.PayoutSheet).create()
 require(UI.OfferPopup).create(windows)
 require(UI.GravitySlider).create()
+require(UI.ShopPrompts).start(windows)
 
 -- Last: starts receiving the profile and the character's bike.
 require(Controllers.Session).start()

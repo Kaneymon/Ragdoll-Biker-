@@ -19,6 +19,8 @@ local Input = require(script.Parent.Parent.Controllers.Input)
 local BikeController = require(script.Parent.Parent.Controllers.BikeController)
 local GearController = require(script.Parent.Parent.Controllers.GearController)
 local RagdollController = require(script.Parent.Parent.Controllers.RagdollController)
+local Session = require(script.Parent.Parent.Controllers.Session)
+local Location = require(Shared.Logic.Location)
 local Ragdoll = require(Shared.Logic.Ragdoll)
 local UiKit = require(script.Parent.UiKit)
 local Window = require(script.Parent.Window)
@@ -55,10 +57,17 @@ end
 local function buildMenu(gui, windows)
 	ui.menu = Instance.new("Frame")
 	ui.menu.BackgroundTransparency = 1
-	ui.menu.Size = UDim2.fromOffset(280, 330)
+	ui.menu.Size = UDim2.fromOffset(280, 520)
 	ui.menu.Position = UDim2.fromOffset(16, 96)
 	ui.menu.Parent = gui
 	UiKit.listLayout(ui.menu, nil, 14, Enum.HorizontalAlignment.Left)
+	-- PLAY in the lobby takes you to your ramp; LOBBY on the ramp (or obby) takes you back
+	ui.play = UiKit.button({ key = "BTN_PLAY", color = P.Money, style = "Title", Size = UDim2.fromOffset(280, 100), LayoutOrder = 0, Parent = ui.menu, onClick = function()
+		Session.travel(Location.RAMP)
+	end })
+	ui.lobby = UiKit.button({ key = "BTN_LOBBY", color = P.Orange, Size = UDim2.fromOffset(230, 70), LayoutOrder = 4, Parent = ui.menu, onClick = function()
+		Session.travel(Location.LOBBY)
+	end })
 	UiKit.button({ key = "BTN_UPGRADES", color = P.Sun, style = "Title", Size = UDim2.fromOffset(280, 110), LayoutOrder = 1, Parent = ui.menu, onClick = function()
 		windows.upgrades:toggle()
 	end })
@@ -112,14 +121,19 @@ local function refreshProfile(profile)
 	UiKit.setText(ui.levelText, "HUD_LEVEL", (Progression.level(profile.totalEarned)))
 	local booster = Progression.equippedBooster(profile)
 	ui.boostBar.Visible = booster ~= nil
-	ui.gear.Visible = booster ~= nil or (Progression.equippedExploder(profile)) ~= nil
+	ui.gear.Visible = State.rules().gear == true and (booster ~= nil or (Progression.equippedExploder(profile)) ~= nil)
 end
 
 local function refreshPhase(phase)
 	if phase == "Riding" then
 		Window.closeAll() -- riding off closes any open menu
 	end
-	ui.menu.Visible = phase == "Ready"
+	if State.profile then
+		refreshProfile(State.profile) -- what's shown can depend on where you are (gear on the obby)
+	end
+	ui.menu.Visible = phase == "Ready" or phase == "Lobby"
+	ui.play.Visible = phase == "Lobby"
+	ui.lobby.Visible = phase == "Ready"
 	ui.start.Visible = phase == "Ready"
 	ui.speed.Visible = IN_RUN[phase] == true
 	ui.mult.Visible = IN_RUN[phase] == true and #State.run.tricks > 0

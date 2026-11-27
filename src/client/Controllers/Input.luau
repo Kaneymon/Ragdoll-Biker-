@@ -24,6 +24,7 @@ local KEYS = { -- key -> { x, z }
 }
 
 local down = {}
+local bound = false
 
 local function handler(name)
 	return function(_, inputState)
@@ -85,13 +86,28 @@ function Input.device(): string
 	return "pc"
 end
 
-function Input.start()
+-- Riding actions on or off (off while walking round the lobby, so Space jumps, E opens shop
+-- prompts and phones don't show the trick buttons).
+function Input.setEnabled(enabled: boolean)
+	if enabled == bound then
+		return
+	end
+	bound = enabled
 	for _, action in Controls.actions do
-		ContextActionService:BindAction(action.name, handler(action.name), action.touch, table.unpack(action.keys))
-		if action.touch then
-			ContextActionService:SetTitle(action.name, Localize.get(action.nameKey))
+		if enabled then
+			ContextActionService:BindAction(action.name, handler(action.name), action.touch, table.unpack(action.keys))
+			if action.touch then
+				ContextActionService:SetTitle(action.name, Localize.get(action.nameKey))
+			end
+		else
+			ContextActionService:UnbindAction(action.name)
+			down[action.name] = false
 		end
 	end
+end
+
+function Input.start()
+	Input.setEnabled(true)
 end
 
 return Input

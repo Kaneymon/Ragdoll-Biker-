@@ -8,11 +8,11 @@ local Ramp = require(Shared.Config.Ramp)
 local Progression = require(Shared.Logic.Progression)
 local MapGeometry = require(Shared.Logic.MapGeometry)
 local Format = require(Shared.Util.Format)
-local Localize = require(Shared.Services.Localize)
 local Net = require(Shared.Net)
 local State = require(script.Parent.Parent.State)
 local Window = require(script.Parent.Window)
 local Card = require(script.Parent.Card)
+local Shop = require(script.Parent.Shop)
 
 local UpgradesWindow = {}
 
@@ -25,14 +25,7 @@ local TABS = {
 	{ id = "exploders", key = "TAB_EXPLODERS" },
 }
 
-local function buy(kind, id)
-	local _, noteKey = Net.func("Purchase"):InvokeServer(kind, id)
-	State.Notify:Fire(noteKey)
-end
-
-local function equip(kind, id)
-	Net.func("Equip"):InvokeServer(kind, id)
-end
+local buy, equip, moneyButton = Shop.buy, Shop.equip, Shop.priceButton
 
 local function statText(def, value)
 	if def.format == "mult" then
@@ -43,18 +36,6 @@ local function statText(def, value)
 		return math.floor(value * 100 + 0.5) .. "%"
 	end
 	return Format.number(value)
-end
-
--- Price button: shows MAX at the top level, greys out when unaffordable, FREE in testing mode.
--- key = label with the price as {1} (plain price by default).
-local function moneyButton(cost, onClick, key)
-	if not cost then
-		return { "BTN_MAX", color = P.Disabled, disabled = true }
-	end
-	if Progression.testMode(State.profile) or State.stats.freeShopping then
-		return { key or "HUD_MONEY", { Localize.get("BTN_FREE") }, color = P.Grape, onClick = onClick }
-	end
-	return { key or "HUD_MONEY", { Format.money(cost) }, color = P.Money, onClick = onClick, disabled = State.profile.money < cost }
 end
 
 local renderers = {}

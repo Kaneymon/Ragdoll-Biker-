@@ -17,7 +17,8 @@ local Signal = require(Shared.Util.Signal)
 
 -- Fired when something that changes the bike/spawn was bought or picked (ramp, gear, map).
 local ShopService = { LoadoutChanged = Signal.new() }
-local LOADOUT_KINDS = { ramp = true, boosters = true, exploders = true, charge = true }
+local LOADOUT_KINDS = { ramp = true, boosters = true, exploders = true, charge = true, paints = true, trails = true }
+local ALWAYS_EQUIPPED = { paints = true } -- slots that can't be emptied (a bike always has paint)
 local TEST_MODE_ATTRIBUTE = "CanTestMode"
 
 local spending = {} -- player -> { base = cash when spending started, spent = total spent since }
@@ -99,6 +100,21 @@ local function buyUpgrade(set)
 	end
 end
 
+-- Paint jobs and trails: bought once, worn straight away.
+local function buyCosmetic(kind)
+	return function(profile, id)
+		local def = Progression.cosmetic(kind, id)
+		local slot = profile[kind]
+		if not def or slot.owned[id] then
+			return "NOTE_ERROR"
+		end
+		return charge(profile, def.price, function()
+			slot.owned[id] = true
+			slot.equipped = id
+		end)
+	end
+end
+
 -- Extra bombs for an owned exploder (1x, 5x, 25x the price).
 local function buyCharge(profile, id)
 	local def = Progression.gearDef("exploders", id)
@@ -122,6 +138,8 @@ local purchases = {
 		end)
 	end,
 
+	paints = buyCosmetic("paints"),
+	trails = buyCosmetic("trails"),
 	boosters = buyGear("boosters"),
 	exploders = buyGear("exploders"),
 
@@ -164,14 +182,14 @@ end
 
 local function onEquip(player, kind, id)
 	local profile = DataService.get(player)
-	if not profile or not Progression.gear(kind) or type(id) ~= "string" then
+	if not profile or not (Progression.gear(kind) or Progression.cosmetics(kind)) or type(id) ~= "string" then
 		return false
 	end
 	local slot = profile[kind]
-	if slot.owned[id] == nil then
+	if not slot.owned[id] then
 		return false
 	end
-	slot.equipped = if slot.equipped == id then "" else id
+	slot.equipped = if slot.equipped == id and not ALWAYS_EQUIPPED[kind] then "" else id
 	DataService.push(player)
 	ShopService.LoadoutChanged:Fire(player)
 	return true

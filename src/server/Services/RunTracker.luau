@@ -1,5 +1,6 @@
 -- One run per life: Riding -> Ragdoll -> Payout -> cash out (respawn).
 -- The server re-scores tricks and impacts itself; the client only reports what happened.
+-- Rides that don't pay (the lobby obby, Logic/Location) end back in the lobby instead.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -11,16 +12,19 @@ local InjuryModel = require(Shared.Logic.InjuryModel)
 local TrickScore = require(Shared.Logic.TrickScore)
 local Progression = require(Shared.Logic.Progression)
 local Ragdoll = require(Shared.Logic.Ragdoll)
+local Location = require(Shared.Logic.Location)
 local Net = require(Shared.Net)
 local DataService = require(script.Parent.DataService)
 local GearService = require(script.Parent.GearService)
 local BikeService = require(script.Parent.BikeService)
 local ShopService = require(script.Parent.ShopService)
+local LocationService = require(script.Parent.LocationService)
 
 local RunTracker = {}
 
 local MAX_IMPACTS_PER_BATCH = 40
 local SERVER_REST_TIMEOUT = Bike.Rest.MaxTime + 10
+local BACK_TO_LOBBY_DELAY = 1.5 -- after an unpaid ride stops
 local runs = {} -- player -> run
 local luckRng = Random.new()
 
@@ -93,6 +97,15 @@ end
 local function finish(player, ragdollTricks)
 	local run = runs[player]
 	if not run or run.phase ~= "Ragdoll" then
+		return
+	end
+	if not Location.rules(Location.of(player)).payout then
+		run.phase = "Done"
+		task.delay(BACK_TO_LOBBY_DELAY, function()
+			if runs[player] == run then
+				LocationService.travel(player, Location.LOBBY)
+			end
+		end)
 		return
 	end
 	run.ragdollTricks = validTricks(ragdollTricks, "grab")
@@ -226,7 +239,7 @@ function RunTracker.start()
 	-- New ramp height or gear: respawn on a fresh bike (menus are only open before a ride starts).
 	ShopService.LoadoutChanged:Connect(function(player)
 		local run = runs[player]
-		if run and run.phase == "Riding" then
+		if run and run.phase == "Riding" and Location.of(player) == Location.RAMP then
 			player:LoadCharacter()
 		end
 	end)

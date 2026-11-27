@@ -138,7 +138,7 @@ function RagdollController.start()
 	RunService.Heartbeat:Connect(step)
 	State.RequestBail:Connect(RagdollController.bail)
 	Input.Began:Connect(function(name)
-		if name == "Bail" and State.isRiding() then
+		if name == "Bail" and State.isRiding() and State.rules().bail then
 			RagdollController.bail("player")
 		end
 	end)

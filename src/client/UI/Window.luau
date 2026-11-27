@@ -102,6 +102,14 @@ function Window:open()
 	UiKit.pop(self.root)
 end
 
+-- Opens on a given tab (nil = the tab it was last on).
+function Window:openTab(tabId)
+	if tabId then
+		self.tab = tabId
+	end
+	self:open()
+end
+
 function Window:close()
 	if self.root.Visible and openWindow == self then
 		Sfx.play("WindowClose")

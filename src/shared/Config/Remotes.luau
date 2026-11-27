@@ -19,5 +19,6 @@ return {
 		"CashOut",
 		"PromptRobux",
 		"TogglePass", -- switch an owned gamepass on/off
+		"Travel", -- go to the Lobby or your Ramp (Logic/Location)
 	},
 }

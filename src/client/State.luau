@@ -9,9 +9,10 @@ local Progression = require(Shared.Logic.Progression)
 local InjuryModel = require(Shared.Logic.InjuryModel)
 local TrickScore = require(Shared.Logic.TrickScore)
 local Tricks = require(Shared.Config.Tricks)
+local Location = require(Shared.Logic.Location)
 
 local State = {
-	-- Phases: Loading, Ready (on bike, not moving), Riding, Air, Ragdoll, Resting, Payout
+	-- Phases: Loading, Lobby (walking), Ready (on bike, not moving), Riding, Air, Ragdoll, Resting, Payout
 	phase = "Loading",
 	profile = nil,
 	stats = nil, -- all upgrade stats (bike + biker)
@@ -44,6 +45,15 @@ function State.setPhase(phase)
 		Players.LocalPlayer:SetAttribute("RunPhase", phase) -- visible to tools/tests
 		State.PhaseChanged:Fire(phase, previous)
 	end
+end
+
+-- Where the player is (Logic/Location) and what's allowed there.
+function State.location()
+	return Location.of(Players.LocalPlayer)
+end
+
+function State.rules()
+	return Location.rules(State.location())
 end
 
 function State.isRiding()

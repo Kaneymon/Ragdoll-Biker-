@@ -1,4 +1,5 @@
--- Builds the cartoon BMX from simple shapes, plus the equipped booster (World/GearBuilder).
+-- Builds the cartoon BMX from simple shapes in the equipped paint job, plus the equipped booster
+-- (World/GearBuilder) and trail (Config/Cosmetics).
 -- Rig (all in chassis space, -Z = forward):
 --   Chassis (invisible physics root)
 --     Motor6D "Whip"  -> FrameRoot (frame, fork, wheels, gear)   tailwhip spins this
@@ -26,7 +27,7 @@ local POINTS = {
 	barsPivot = Vector3.new(0, 0.75, -1.5),
 	boosterStrut = Vector3.new(0, 0.45, 1.3), -- where the booster's support bar meets the frame
 }
-local FRAME_COLOR, ACCENT = P.Coral, P.Sun
+local TRAIL_TRANSPARENCY = NumberSequence.new(0.15, 1)
 local GRIP_OFFSET = Vector3.new(0, 0.7, 0.1) -- from the bars pivot to the bar (see barsParts)
 local GRIP_SPREAD = 1.0 -- grip centre distance from the middle of the bar
 local SLIPPERY = PhysicalProperties.new(1, 0, 0, 100, 100)
@@ -38,8 +39,8 @@ local function visual(props, parent)
 	return Build.decor(props)
 end
 
-local function tube(a, b, radius, color, parent)
-	local part = Build.tube(a, b, radius, { Color = color, Anchored = false, Massless = true, Parent = parent })
+local function tube(a, b, radius, color, parent, material)
+	local part = Build.tube(a, b, radius, { Color = color, Material = material or Enum.Material.SmoothPlastic, Anchored = false, Massless = true, Parent = parent })
 	part.CanCollide, part.CanQuery, part.CanTouch = false, false, false
 	return part
 end
@@ -68,10 +69,10 @@ local function pivotPart(name, at, parent)
 	return visual({ Name = name, Size = Vector3.one * 0.2, CFrame = CFrame.new(at), Transparency = 1 }, parent)
 end
 
-local function wheel(name, at, model)
+local function wheel(name, at, model, paint)
 	local hub = visual({ Name = name, Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.35, WHEEL_RADIUS * 2, WHEEL_RADIUS * 2), CFrame = CFrame.new(at), Color = P.Rubber }, model)
 	local parts = {
-		visual({ Name = "Rim", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.4, WHEEL_RADIUS * 1.5, WHEEL_RADIUS * 1.5), CFrame = CFrame.new(at), Color = ACCENT }, model),
+		visual({ Name = "Rim", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.4, WHEEL_RADIUS * 1.5, WHEEL_RADIUS * 1.5), CFrame = CFrame.new(at), Color = paint.accent }, model),
 		visual({ Name = "Hub", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.5, 0.5, 0.5), CFrame = CFrame.new(at), Color = P.Metal }, model),
 		visual({ Name = "Spoke", Size = Vector3.new(0.42, WHEEL_RADIUS * 1.45, 0.18), CFrame = CFrame.new(at), Color = P.White }, model),
 		visual({ Name = "Spoke", Size = Vector3.new(0.42, 0.18, WHEEL_RADIUS * 1.45), CFrame = CFrame.new(at), Color = P.White }, model),
@@ -80,31 +81,32 @@ local function wheel(name, at, model)
 	return hub
 end
 
-local function frameParts(model)
+local function frameParts(model, paint)
 	local p = POINTS
 	local parts = {}
 	local function add(part)
 		table.insert(parts, part)
 	end
-	add(tube(p.seat, p.headTop, 0.16, FRAME_COLOR, model)) -- top tube
-	add(tube(p.crank, p.headBottom, 0.18, FRAME_COLOR, model)) -- down tube
-	add(tube(p.crank, p.seat, 0.16, FRAME_COLOR, model)) -- seat tube
-	add(tube(p.headBottom, p.headTop, 0.2, ACCENT, model)) -- head tube
+	local frame, accent, finish = paint.frame, paint.accent, paint.material
+	add(tube(p.seat, p.headTop, 0.16, frame, model, finish)) -- top tube
+	add(tube(p.crank, p.headBottom, 0.18, frame, model, finish)) -- down tube
+	add(tube(p.crank, p.seat, 0.16, frame, model, finish)) -- seat tube
+	add(tube(p.headBottom, p.headTop, 0.2, accent, model)) -- head tube
 	for _, x in { -0.28, 0.28 } do
 		local offset = Vector3.new(x, 0, 0)
-		add(tube(p.crank + offset, p.rear + offset, 0.11, FRAME_COLOR, model)) -- chain stays
-		add(tube(p.seat + offset * 0.5, p.rear + offset, 0.11, FRAME_COLOR, model)) -- seat stays
-		add(tube(p.headBottom + offset * 0.4, p.front + offset, 0.13, ACCENT, model)) -- fork
+		add(tube(p.crank + offset, p.rear + offset, 0.11, frame, model, finish)) -- chain stays
+		add(tube(p.seat + offset * 0.5, p.rear + offset, 0.11, frame, model, finish)) -- seat stays
+		add(tube(p.headBottom + offset * 0.4, p.front + offset, 0.13, accent, model)) -- fork
 	end
 	add(visual({ Name = "Seat", Size = Vector3.new(0.7, 0.3, 1.5), CFrame = CFrame.new(p.seat + Vector3.new(0, 0.3, 0.1)), Color = P.Ink }, model))
 	return parts
 end
 
 -- Sprocket, crank arms and pedals: one assembly that spins round the crank axle.
-local function crankParts(model)
+local function crankParts(model, paint)
 	local p = POINTS
 	local parts = {
-		visual({ Name = "Sprocket", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.15, 1.1, 1.1), CFrame = CFrame.new(p.crank + Vector3.new(0.3, 0, 0)), Color = ACCENT }, model),
+		visual({ Name = "Sprocket", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.15, 1.1, 1.1), CFrame = CFrame.new(p.crank + Vector3.new(0.3, 0, 0)), Color = paint.accent }, model),
 		visual({ Name = "Axle", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.9, 0.25, 0.25), CFrame = CFrame.new(p.crank), Color = P.Metal }, model),
 	}
 	for _, side in { -1, 1 } do
@@ -128,7 +130,36 @@ local function barsParts(model)
 	return parts
 end
 
--- gear = { booster = def? } (exploder bombs ride on the rider's belt, see GearService)
+-- A ribbon behind the rear wheel, as tall as the trail's width.
+local function addTrail(def, frameRoot)
+	local ends = {}
+	for i, y in { -0.5, 0.5 } do
+		local attachment = Instance.new("Attachment")
+		attachment.Name = "Trail" .. i
+		attachment.Position = frameRoot.CFrame:PointToObjectSpace(POINTS.rear + Vector3.new(0, y * def.width, 0.4))
+		attachment.Parent = frameRoot
+		ends[i] = attachment
+	end
+	local trail = Instance.new("Trail")
+	trail.Attachment0, trail.Attachment1 = ends[1], ends[2]
+	trail.Lifetime = def.lifetime
+	trail.Transparency = TRAIL_TRANSPARENCY
+	trail.LightEmission = if def.light then 1 else 0
+	trail.FaceCamera = true
+	if def.rainbow then
+		local keys = {}
+		for i = 0, 6 do
+			table.insert(keys, ColorSequenceKeypoint.new(i / 6, Color3.fromHSV(i / 6, 0.85, 1)))
+		end
+		trail.Color = ColorSequence.new(keys)
+	else
+		trail.Color = ColorSequence.new(def.from, def.to)
+	end
+	trail.Parent = frameRoot
+end
+
+-- gear = { paint = paint def, trail = trail def?, booster = booster def? } (exploder bombs ride on
+-- the rider's belt, see GearService)
 function BikeBuilder.build(gear)
 	local model = Instance.new("Model")
 	model.Name = "Bike"
@@ -138,17 +169,20 @@ function BikeBuilder.build(gear)
 	model.PrimaryPart = chassis
 
 	local frameRoot = pivotPart("FrameRoot", POINTS.headTop, model)
-	local frame = frameParts(model)
+	local frame = frameParts(model, gear.paint)
 	if gear.booster then
 		local booster = Build.model("Booster", model)
 		table.insert(frame, GearBuilder.booster(gear.booster.id, CFrame.new(), POINTS.boosterStrut, booster))
 	end
 	weldAll(frameRoot, frame)
 	motor("Whip", chassis, frameRoot, POINTS.headTop)
-	motor("FrontSpin", frameRoot, wheel("FrontWheel", POINTS.front, model), POINTS.front)
-	motor("RearSpin", frameRoot, wheel("RearWheel", POINTS.rear, model), POINTS.rear)
+	motor("FrontSpin", frameRoot, wheel("FrontWheel", POINTS.front, model, gear.paint), POINTS.front)
+	motor("RearSpin", frameRoot, wheel("RearWheel", POINTS.rear, model, gear.paint), POINTS.rear)
+	if gear.trail then
+		addTrail(gear.trail, frameRoot)
+	end
 	local crankRoot = pivotPart("CrankRoot", POINTS.crank, model)
-	weldAll(crankRoot, crankParts(model))
+	weldAll(crankRoot, crankParts(model, gear.paint))
 	motor("Crank", frameRoot, crankRoot, POINTS.crank)
 
 	local barsRoot = pivotPart("BarsRoot", POINTS.barsPivot, model)

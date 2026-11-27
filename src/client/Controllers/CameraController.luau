@@ -12,6 +12,7 @@ local CameraController = {}
 local BASE = { distance = 18, height = 7, fov = 70 }
 local PER_SPEED = { distance = 0.015, height = 0.006, fov = 0.02 } -- how much speed pulls the camera back
 local MAX_FOV_BONUS = 12
+local LOBBY_VIEW = { distance = 14, height = 6 } -- where the walking camera starts, behind the player
 local SHAKE_DECAY = 6
 local CLEARANCE = 2
 local MAX_PITCH = 0.6 -- keeps the camera from looking straight up or down
@@ -51,8 +52,9 @@ end
 local function step(dt)
 	local camera = workspace.CurrentCamera
 	local target = subject()
-	if not target or State.phase == "Loading" then
+	if not target or State.phase == "Loading" or State.phase == "Lobby" then
 		camera.CameraType = Enum.CameraType.Custom
+		camera.FieldOfView = BASE.fov
 		return
 	end
 	camera.CameraType = Enum.CameraType.Scriptable
@@ -80,8 +82,29 @@ local function step(dt)
 	camera.FieldOfView = BASE.fov + math.min(speed * PER_SPEED.fov, MAX_FOV_BONUS)
 end
 
+-- Walking in the lobby uses the normal Roblox camera: hand it back just behind the new character
+-- (it would otherwise carry on from wherever the ride camera left it).
+local function backToNormalCamera()
+	local camera = workspace.CurrentCamera
+	local character = State.character
+	local root = character and character:WaitForChild("HumanoidRootPart", 5)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not humanoid then
+		return
+	end
+	camera.CameraType = Enum.CameraType.Custom
+	camera.CameraSubject = humanoid
+	camera.FieldOfView = BASE.fov
+	camera.CFrame = CFrame.lookAt((root.CFrame * CFrame.new(0, LOBBY_VIEW.height, LOBBY_VIEW.distance)).Position, root.Position)
+end
+
 function CameraController.start()
 	RunService:BindToRenderStep("RagdollBikerCamera", Enum.RenderPriority.Camera.Value + 1, step)
+	State.PhaseChanged:Connect(function(phase)
+		if phase == "Lobby" then
+			task.defer(backToNormalCamera)
+		end
+	end)
 end
 
 return CameraController

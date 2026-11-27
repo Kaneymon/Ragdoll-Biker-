@@ -1,4 +1,4 @@
--- World setup: collision groups, text table, maps, and spawn points.
+-- World setup: collision groups, text table, maps, the lobby, and spawn points.
 local PhysicsService = game:GetService("PhysicsService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -10,10 +10,12 @@ local Bike = require(Shared.Config.Bike)
 local MapGeometry = require(Shared.Logic.MapGeometry)
 local Localize = require(Shared.Services.Localize)
 local MapBuilder = require(script.Parent.Parent.World.MapBuilder)
+local LobbyBuilder = require(script.Parent.Parent.World.LobbyBuilder)
 
 local WorldService = {}
 
-WorldService.RIDERS_GROUP = "Riders"
+WorldService.RIDERS_GROUP = "Riders" -- riders on the ramps: pass through each other
+WorldService.SLOPE_GROUP = "Slope" -- riders past the kicker: bump into each other, not into ramp riders
 local SPAWN_SPREAD = 14
 
 local function folder(name)
@@ -29,16 +31,22 @@ end
 
 local function setupCollisionGroups()
 	PhysicsService:RegisterCollisionGroup(WorldService.RIDERS_GROUP)
+	PhysicsService:RegisterCollisionGroup(WorldService.SLOPE_GROUP)
 	PhysicsService:CollisionGroupSetCollidable(WorldService.RIDERS_GROUP, WorldService.RIDERS_GROUP, false)
+	PhysicsService:CollisionGroupSetCollidable(WorldService.RIDERS_GROUP, WorldService.SLOPE_GROUP, false)
 end
 
--- Maps already baked into the place are kept (so they can be hand-edited); missing ones are built.
+-- Maps and the lobby already baked into the place are kept (so they can be hand-edited); missing
+-- ones are built.
 local function buildMaps()
 	local world = folder("World")
 	for _, def in Maps.list do
 		if not def.comingSoon and not world:FindFirstChild(def.id) then
 			MapBuilder.build(def, world)
 		end
+	end
+	if not world:FindFirstChild("Lobby") then
+		LobbyBuilder.build(world)
 	end
 end
 
