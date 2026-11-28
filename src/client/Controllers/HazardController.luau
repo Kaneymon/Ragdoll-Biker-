@@ -51,7 +51,8 @@ local function step()
 	end
 	for _, model in CollectionService:GetTagged(Hazards.Tag) do
 		local kind = Hazards.kinds[model:GetAttribute("Hazard")]
-		if kind and model.Parent and (model:GetPivot().Position - rider.Position).Magnitude <= kind.radius then
+		local radius = if kind then model:GetAttribute("HazardRadius") or kind.radius else 0
+		if kind and model.Parent and (model:GetPivot().Position - rider.Position).Magnitude <= radius then
 			blowUp(model, kind, rider)
 			return
 		end

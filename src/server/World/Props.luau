@@ -1,5 +1,5 @@
--- Map props. Most are cartoon shapes built from parts; the car and the textured park props are
--- Blender meshes kept in ServerStorage.Assets (see Config/MeshProps). Each returns a Model
+-- Map props. Most are cartoon shapes built from parts; the cars and the textured park props are
+-- meshes kept in ServerStorage.Assets (see Config/MeshProps). Each returns a Model
 -- pivoted at its base.
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -104,25 +104,25 @@ function Props.crate(rng: Random)
 	return finish(model)
 end
 
-local CAR_PAINTS = { P.Coral, P.Sky, P.Sun, P.Grape, P.Grass, P.Orange }
-local CAR_PART_COLORS = { -- mesh part name -> colour ("paint" = the car's random paint)
-	Body = "paint", Cabin = "paint",
-	WindowFront = P.Sky, WindowBack = P.Sky, WindowSide = P.Sky,
-	Tyre = P.Rubber, Rim = P.White, BumperFront = P.Ink, BumperBack = P.Ink,
-	Headlight = P.Sun, Taillight = P.Danger,
-}
-
--- A toy car that blows up when touched (Config/Hazards "Car"): it never blocks anything.
+-- A low-poly car from the SuperLowPolyCars pack (ServerStorage.Assets.Cars, one textured MeshPart
+-- "Body" each; assets/models/cars/README.md) that blows up when touched (Config/Hazards "Car"): it
+-- never blocks anything. Longer cars (trucks, vans) get a bigger blast radius so their ends count.
 function Props.car(rng: Random)
-	local model = ServerStorage.Assets.ToyCar:Clone()
+	local cars = ServerStorage.Assets.Cars:GetChildren()
+	table.sort(cars, function(a, b)
+		return a.Name < b.Name
+	end) -- same seed, same cars
+	local model = cars[rng:NextInteger(1, #cars)]:Clone()
+	model:SetAttribute("Variant", model.Name)
 	model.Name = "Car"
-	local paint = CAR_PAINTS[rng:NextInteger(1, #CAR_PAINTS)]
-	for _, part in model:GetChildren() do
-		local color = CAR_PART_COLORS[part.Name]
-		part.Color = if color == "paint" then paint else color or P.Metal
-		part.CanCollide, part.CanQuery, part.CanTouch = false, false, false
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.CanCollide, part.CanQuery, part.CanTouch = false, false, false
+		end
 	end
+	local size = model:GetExtentsSize()
 	model:SetAttribute("Hazard", "Car")
+	model:SetAttribute("HazardRadius", math.max(Hazards.kinds.Car.radius, math.max(size.X, size.Z) / 2 + 1.5))
 	CollectionService:AddTag(model, Hazards.Tag)
 	return model
 end
