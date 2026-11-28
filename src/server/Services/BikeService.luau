@@ -21,6 +21,7 @@ local BikeBuilder = require(script.Parent.Parent.World.BikeBuilder)
 local BikeService = {}
 
 local BIKE_LIFETIME_AFTER_BAIL = 6
+local STREAM_TIMEOUT = 10 -- seconds to wait for the ground round a ride start to stream in
 local ZONE_CHECK = 0.25 -- seconds between "past the kicker yet?" checks
 local GROUP_ATTRIBUTE = "CollisionGroup" -- the rider's current group, for parts added later
 local bikes = {} -- player -> bike model
@@ -94,7 +95,16 @@ local function mount(player, character)
 	BikeService.remove(player)
 	local bike = BikeBuilder.build(gearFor(profile, rules))
 	bike.Name = "Bike_" .. player.UserId
-	bike:PivotTo(LocationService.rideStart(player, profile, spawnSlot(player)))
+	local start = LocationService.rideStart(player, profile, spawnSlot(player))
+	-- StreamingEnabled: load the ground round the start before the rider is put there
+	pcall(player.RequestStreamAroundAsync, player, start.Position, STREAM_TIMEOUT)
+	if not character.Parent or player.Character ~= character then
+		return
+	end
+	bike:PivotTo(start)
+	-- the owner always has their whole bike (BikeController waits for its parts)
+	bike.ModelStreamingMode = Enum.ModelStreamingMode.PersistentPerPlayer
+	bike:AddPersistentPlayer(player)
 	for _, part in bike:GetDescendants() do
 		if part:IsA("BasePart") then
 			part.CollisionGroup = groupOf(player)

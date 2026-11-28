@@ -48,6 +48,12 @@ local function buildMaps()
 	if not world:FindFirstChild("Lobby") then
 		LobbyBuilder.build(world)
 	end
+	-- StreamingEnabled: maps out of range still show as a low-detail mesh
+	for _, map in world:GetChildren() do
+		if map:IsA("Model") then
+			map.LevelOfDetail = Enum.ModelLevelOfDetail.StreamingMesh
+		end
+	end
 end
 
 local function setupEnvironment()
@@ -68,7 +74,8 @@ end
 
 function WorldService.start()
 	-- workspace.FallenPartsDestroyHeight is set to -2000 in the place (scripts can't write it).
-	-- workspace.StreamingEnabled is off in the place (scripts can't write it either).
+	-- workspace.StreamingEnabled is ON in the place (scripts can't write it either): without it
+	-- every client downloads all maps and the Mountain's terrain before it can start.
 	setupCollisionGroups()
 	setupEnvironment()
 	Localize.publishTable()
