@@ -103,22 +103,55 @@ function Ragdoll.enable(character, surface: PhysicalProperties)
 	character:SetAttribute("Ragdolled", true)
 end
 
--- Ragdoll poses: switch the pose joints' drives on (torque-limited, so the limp body still
--- tumbles) or back off. The pose itself is written to joint.Transform by Logic/RiderPose.
--- AnimationConstraint rigs only; returns false when the rig can't be posed while limp.
-function Ragdoll.drive(character, jointNames, on: boolean)
-	if not Joints.usesConstraints(character) then
-		return false
+-- Motor6D rigs pose a limp body with an AlignOrientation per joint: it turns the child part
+-- towards the "RagPose_<joint>" attachment on the parent part, which Joints.pose moves.
+local function poseDrive(joint)
+	local part0, part1 = joint.Part0, joint.Part1
+	local align = part0:FindFirstChild("RagAlign_" .. joint.Name)
+	if align then
+		return align
 	end
+	local child = Instance.new("Attachment")
+	child.Name = "RagPoseChild_" .. joint.Name
+	child.CFrame = joint.C1
+	child.Parent = part1
+	local target = Instance.new("Attachment")
+	target.Name = "RagPose_" .. joint.Name
+	target.CFrame = part0.CFrame:ToObjectSpace(part1.CFrame * joint.C1) -- start where the limb is now
+	target.Parent = part0
+	align = Instance.new("AlignOrientation")
+	align.Name = "RagAlign_" .. joint.Name
+	align.Mode = Enum.OrientationAlignmentMode.TwoAttachment
+	align.Attachment0, align.Attachment1 = child, target
+	align.ReactionTorqueEnabled = true
+	align.Responsiveness = Bike.Glide.PoseResponsiveness
+	align.MaxTorque = Bike.Glide.PoseTorque
+	align.Enabled = false
+	align.Parent = part0
+	return align
+end
+
+-- Ragdoll poses: switch the pose joints' drives on (torque-limited, so the limp body still
+-- tumbles) or back off. The pose itself is written by Logic/RiderPose (through Joints.pose).
+-- jointNames are R15 names; joints an R6 body doesn't have are skipped. Returns true when posed.
+function Ragdoll.drive(character, jointNames, on: boolean)
+	local constraints = Joints.usesConstraints(character)
+	local posed = false
 	for _, name in jointNames do
 		local joint = Joints.find(character, name)
-		if joint then
+		if not joint or Joints.isRoot(joint) then
+			continue
+		end
+		if constraints then
 			joint.IsKinematic = false
 			joint.MaxTorque = Bike.Glide.PoseTorque
 			joint.Enabled = on
+		elseif joint.Part0 and joint.Part1 then
+			poseDrive(joint).Enabled = on
 		end
+		posed = true
 	end
-	return true
+	return posed
 end
 
 function Ragdoll.setVelocity(character, velocity)
