@@ -9,6 +9,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Controls = require(Shared.Config.Controls)
 local Localize = require(Shared.Services.Localize)
 local Signal = require(Shared.Util.Signal)
+local State = require(script.Parent.Parent.State)
 
 local Input = { Began = Signal.new(), Ended = Signal.new() }
 
@@ -24,10 +25,16 @@ local KEYS = { -- key -> { x, z }
 }
 
 local down = {}
-local bound = false
+local bound = {} -- action name -> true while bound
 
-local function handler(name)
-	return function(_, inputState)
+local AIR_PHASES = { Air = true, Ragdoll = true }
+
+local function handler(action)
+	local name = action.name
+	return function(_, inputState, input)
+		-- air-only keys pass through on the ground (E reaches the lobby shop prompts); touch
+		-- buttons are ours alone, so they always count
+		local pass = action.airOnly and not AIR_PHASES[State.phase] and input.UserInputType ~= Enum.UserInputType.Touch
 		if inputState == Enum.UserInputState.Begin then
 			down[name] = true
 			Input.Began:Fire(name)
@@ -35,7 +42,7 @@ local function handler(name)
 			down[name] = false
 			Input.Ended:Fire(name)
 		end
-		return Enum.ContextActionResult.Sink
+		return if pass then Enum.ContextActionResult.Pass else Enum.ContextActionResult.Sink
 	end
 end
 
@@ -86,28 +93,29 @@ function Input.device(): string
 	return "pc"
 end
 
--- Riding actions on or off (off while walking round the lobby, so Space jumps, E opens shop
--- prompts and phones don't show the trick buttons).
-function Input.setEnabled(enabled: boolean)
-	if enabled == bound then
-		return
-	end
-	bound = enabled
+-- Bind the riding actions the Logic/Location rules allow here (nil = none, e.g. while walking).
+-- Unbound keys fall through, so Space jumps and E opens shop prompts when nothing takes them.
+function Input.setRules(rules)
 	for _, action in Controls.actions do
-		if enabled then
-			ContextActionService:BindAction(action.name, handler(action.name), action.touch, table.unpack(action.keys))
+		local want = rules ~= nil and (action.rule == nil or rules[action.rule] == true)
+		if want and not bound[action.name] then
+			ContextActionService:BindAction(action.name, handler(action), action.touch, table.unpack(action.keys))
 			if action.touch then
 				ContextActionService:SetTitle(action.name, Localize.get(action.nameKey))
 			end
-		else
+		elseif not want and bound[action.name] then
 			ContextActionService:UnbindAction(action.name)
-			down[action.name] = false
+			if down[action.name] then
+				down[action.name] = false
+				Input.Ended:Fire(action.name)
+			end
 		end
+		bound[action.name] = want or nil
 	end
 end
 
 function Input.start()
-	Input.setEnabled(true)
+	Input.setRules(State.rules())
 end
 
 return Input

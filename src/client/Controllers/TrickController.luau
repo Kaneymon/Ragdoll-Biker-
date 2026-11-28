@@ -170,8 +170,20 @@ local function step(dt)
 	end
 end
 
+-- Where rides don't pay (the lobby), each jump is its own combo.
+local function freshCombo()
+	local run = State.run
+	run.tricks, run.ragdollTricks = {}, {}
+	run.combo = TrickScore.newCombo()
+	run.multiplier = Tricks.StartMultiplier
+	Players.LocalPlayer:SetAttribute("RunTricks", 0)
+end
+
 local function onPhase(phase)
 	if phase == "Air" then
+		if not State.rules().payout then
+			freshCombo()
+		end
 		turned.pitch, turned.roll = 0, 0
 		local chassis = BikeController.chassis()
 		lastCFrame = chassis and chassis.CFrame
