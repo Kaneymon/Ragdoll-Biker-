@@ -236,7 +236,7 @@ local function step()
 	end
 	if phase == "Air" then
 		local chassis = BikeController.chassis()
-		local show = chassis ~= nil and nearGround(chassis)
+		local show = chassis ~= nil and State.rules().bail and nearGround(chassis)
 		if show and not ui.bail.Visible then
 			UiKit.setText(ui.bailText, bailPromptKey())
 			UiKit.pop(ui.bail)

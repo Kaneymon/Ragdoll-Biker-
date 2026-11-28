@@ -7,14 +7,15 @@ local Location = {
 	ATTRIBUTE = "Location",
 }
 
--- tricks = the trick / bail / boost / bomb buttons work (off in the lobby so E opens the shops),
--- bail = can jump off on purpose (and stopping for a while bails you), gear = boosters and
--- exploders work, payout = the run is paid (else stopping after a crash sends you back to the
--- lobby's middle), bump = riders collide with each other from the start (on the ramps they only
--- do once they're past their kicker, see BikeService)
+-- tricks = the trick buttons work (in the air; on the ground E still opens the lobby shops),
+-- hop = Space / A bunnyhops (lobby; on the ramps that button bails), bail = can jump off on purpose
+-- (and stopping for a while bails you), gear = boosters and exploders work, payout = the run is
+-- paid (else stopping after a crash sends you back to the lobby's middle), bump = riders collide
+-- with each other from the start (on the ramps they only do once they're past their kicker, see
+-- BikeService)
 local RULES = {
-	Lobby = { tricks = false, bail = false, gear = false, payout = false, bump = true },
-	Ramp = { tricks = true, bail = true, gear = true, payout = true, bump = false },
+	Lobby = { tricks = true, hop = true, bail = false, gear = false, payout = false, bump = true },
+	Ramp = { tricks = true, hop = false, bail = true, gear = true, payout = true, bump = false },
 }
 
 function Location.of(player)

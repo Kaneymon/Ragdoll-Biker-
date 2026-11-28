@@ -33,7 +33,7 @@ local function onCharacter(character)
 	State.setPhase("Loading")
 	State.character = character
 	State.resetRun()
-	Input.setEnabled(State.rules().tricks)
+	Input.setRules(State.rules())
 	local function isCurrent()
 		return State.character == character and character.Parent ~= nil
 	end

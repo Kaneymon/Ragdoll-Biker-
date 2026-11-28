@@ -210,6 +210,7 @@ local Text = {
 	CTRL_BUTTON = "On-screen button",
 
 	-- Controls
+	ACT_HOP = "Hop",
 	ACT_BAIL = "Bail",
 	ACT_BOOST = "Boost",
 	ACT_EXPLODE = "Explode",
