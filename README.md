@@ -48,7 +48,7 @@ To keep progress in Studio tests, turn on Game Settings > Security > Enable Stud
 | Pedal / brake / steer | W / S / A D | Left stick |
 | Flip (air) | W front flip, S backflip | Left stick |
 | Side flip (air) | A / D | Left stick |
-| Hop (ground) / Bail (air) | Space | A |
+| Bunnyhop (lobby: hold to crouch, let go to pop) / Bail (ramps) | Space | A |
 | Boost | Left Shift | R2 |
 | Explode | X | Y |
 | Tailwhip / Barspin | Q / E | L1 / R1 |

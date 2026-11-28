@@ -15,6 +15,13 @@ return {
 	CrashAngle = 55, -- degrees off upright on landing = crash
 	SideslipAngle = 70, -- degrees between bike and travel direction = crash
 	LeaveGroundGrace = 0.25,
+	-- Bunnyhop (where Logic/Location allows it, the lobby): hold Hop to crouch, let go to pop.
+	-- Pop speed goes from Min (a tap) to Max (held for ChargeTime) plus PedalShare x the Pedals
+	-- jumpHeight; Max is about a second of air, enough for a tailwhip or a quick flip.
+	-- Crouch = studs the bike sinks at full charge, NoseUp/NoseTime = the front-wheel-first lift,
+	-- Level = how fast the bike levels out after that with no flip input, Spin = flips spin this
+	-- much faster off a hop (so a full hop has time for a flip).
+	Hop = { Min = 45, Max = 90, ChargeTime = 0.35, PedalShare = 0.2, Crouch = 0.9, NoseUp = 5, NoseTime = 0.14, Level = 6, Spin = 2 },
 	LaunchPopPerSpeed = 0.22, -- extra launch speed off a kicker per stud/s of entry speed
 	PedalGearRatio = 2.2, -- wheel turns per pedal turn (pedals only spin while pedalling)
 	PedalMaxSpin = 14, -- radians/sec cap so pedals stay readable at high speed
@@ -27,8 +34,9 @@ return {
 	-- airControl is below 1 (Helmet level 20 = always full, like the original steering).
 	-- On the ground, control = GroundShare, rising with Kneepads slide: slide == FullGroundSlide
 	-- (Kneepads level 20) gives full ground control; more slide keeps going up.
-	-- PoseTorque = how hard a held pose bends the limp body (ragdoll poses).
-	Glide = { Accel = 110, Spin = 16, MaxSpin = 20, FullSpeed = 250, GroundShare = 0.25, FullGroundSlide = 0.36, GroundReach = 3, PoseTorque = 4000 },
+	-- PoseTorque = how hard a held pose bends the limp body (ragdoll poses); PoseResponsiveness = how
+	-- fast it gets there on Motor6D rigs (AnimationConstraint rigs use their own drive).
+	Glide = { Accel = 110, Spin = 16, MaxSpin = 20, FullSpeed = 250, GroundShare = 0.25, FullGroundSlide = 0.36, GroundReach = 3, PoseTorque = 4000, PoseResponsiveness = 40 },
 	Rest = { Speed = 4, Time = 1.2, MaxTime = 30, FallBelowMap = 150 },
 	-- Ragdoll body surface (Kneepads lower the friction, Body Armour raises the bounce).
 	RagdollPhysics = { Density = 0.9, Friction = 1.2, Elasticity = 0.15, FrictionWeight = 5, ElasticityWeight = 1 },
