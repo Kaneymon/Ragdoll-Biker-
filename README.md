@@ -36,7 +36,9 @@ tools/checksums.py  prints a checksum per script, used to check Studio matches t
 Install Rojo and run `rojo serve`, then connect from the Rojo Studio plugin. The Hill & Park map is baked
 into the place (`Workspace.World.hill_park`); if it is deleted, `WorldService` rebuilds it from `Config/Maps.luau`.
 
-Place settings the code relies on: `Workspace.FallenPartsDestroyHeight = -2000`, mouse lock off.
+Place settings the code relies on: `Workspace.FallenPartsDestroyHeight = -2000`, mouse lock off,
+`Workspace.StreamingEnabled = true` (min radius 512, target 2048, MinimumRadiusPause). Without streaming
+every client downloads all six maps and the Mountain's terrain before a playtest can start.
 To keep progress in Studio tests, turn on Game Settings > Security > Enable Studio Access to API Services.
 
 ## Controls

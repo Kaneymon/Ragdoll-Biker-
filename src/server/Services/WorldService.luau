@@ -68,7 +68,9 @@ end
 
 function WorldService.start()
 	-- workspace.FallenPartsDestroyHeight is set to -2000 in the place (scripts can't write it).
-	-- workspace.StreamingEnabled is off in the place (scripts can't write it either).
+	-- workspace.StreamingEnabled is ON in the place (scripts can't write it either): without it
+	-- every client downloads all maps and the Mountain's terrain before it can start. The baked map
+	-- models have LevelOfDetail = StreamingMesh (set in Studio; scripts can't write that either).
 	setupCollisionGroups()
 	setupEnvironment()
 	Localize.publishTable()
