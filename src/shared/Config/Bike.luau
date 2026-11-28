@@ -27,8 +27,9 @@ return {
 	-- airControl is below 1 (Helmet level 20 = always full, like the original steering).
 	-- On the ground, control = GroundShare, rising with Kneepads slide: slide == FullGroundSlide
 	-- (Kneepads level 20) gives full ground control; more slide keeps going up.
-	-- PoseTorque = how hard a held pose bends the limp body (ragdoll poses).
-	Glide = { Accel = 110, Spin = 16, MaxSpin = 20, FullSpeed = 250, GroundShare = 0.25, FullGroundSlide = 0.36, GroundReach = 3, PoseTorque = 4000 },
+	-- PoseTorque = how hard a held pose bends the limp body (ragdoll poses); PoseResponsiveness = how
+	-- fast it gets there on Motor6D rigs (AnimationConstraint rigs use their own drive).
+	Glide = { Accel = 110, Spin = 16, MaxSpin = 20, FullSpeed = 250, GroundShare = 0.25, FullGroundSlide = 0.36, GroundReach = 3, PoseTorque = 4000, PoseResponsiveness = 40 },
 	Rest = { Speed = 4, Time = 1.2, MaxTime = 30, FallBelowMap = 150 },
 	-- Ragdoll body surface (Kneepads lower the friction, Body Armour raises the bounce).
 	RagdollPhysics = { Density = 0.9, Friction = 1.2, Elasticity = 0.15, FrictionWeight = 5, ElasticityWeight = 1 },
