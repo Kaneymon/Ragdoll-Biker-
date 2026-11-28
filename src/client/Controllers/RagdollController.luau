@@ -7,6 +7,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Ground = require(Shared.Logic.Ground)
 local Bike = require(Shared.Config.Bike)
 local Ragdoll = require(Shared.Logic.Ragdoll)
+local BikeWreck = require(Shared.Logic.BikeWreck)
 local MapGeometry = require(Shared.Logic.MapGeometry)
 local RiderPose = require(Shared.Logic.RiderPose)
 local Net = require(Shared.Net)
@@ -48,6 +49,9 @@ function RagdollController.bail(reason: string, extraVelocity: Vector3?)
 	local weld = ride and ride.chassis:FindFirstChild("RiderWeld")
 	if weld then
 		weld:Destroy()
+	end
+	if ride then -- the empty bike tumbles on its own from here
+		BikeWreck.loosen(ride.bike)
 	end
 	RiderPose.release(character)
 	Ragdoll.enable(character, Ragdoll.surface(State.stats))
@@ -137,6 +141,13 @@ end
 function RagdollController.start()
 	RunService.Heartbeat:Connect(step)
 	State.RequestBail:Connect(RagdollController.bail)
+	-- A new character (respawned before the old body came to rest, e.g. pulled back after falling
+	-- off the lobby): forget the old body, or the camera keeps following it.
+	State.PhaseChanged:Connect(function(phase)
+		if phase == "Loading" then
+			active = nil
+		end
+	end)
 	Input.Began:Connect(function(name)
 		if name == "Bail" and State.isRiding() and State.rules().bail then
 			RagdollController.bail("player")

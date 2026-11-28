@@ -39,6 +39,8 @@ into the place (`Workspace.World.hill_park`); if it is deleted, `WorldService` r
 Place settings the code relies on: `Workspace.FallenPartsDestroyHeight = -2000`, mouse lock off,
 `Workspace.StreamingEnabled = true` (min radius 512, target 2048, MinimumRadiusPause). Without streaming
 every client downloads all six maps and the Mountain's terrain before a playtest can start.
+The baked map models (`Workspace.World.<map>`) need `LevelOfDetail = Disabled`: with StreamingMesh the
+map you're riding shows as a grey stand-in, because a map is bigger than the streaming radius.
 To keep progress in Studio tests, turn on Game Settings > Security > Enable Studio Access to API Services.
 
 ## Controls

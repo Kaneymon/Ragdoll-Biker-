@@ -3,8 +3,9 @@
 --  * track()/blend(): client side, smoothly blends joints and the seat weld toward a target pose
 --    every frame right before physics (AnimationConstraint rigs get it through Transform,
 --    as Roblox recommends for procedural animation).
---  * Reach: poses with grip = true pull the hands onto the handlebar grips, and poses with feet
---    keep the feet on the pedals as the cranks turn. R15 arms use IKControls; R15 legs are solved
+--  * Reach: poses with grip = true pull the hands onto the handlebar grips, poses with feet
+--    keep the feet on the pedals as the cranks turn, and footDown puts a foot on the ground
+--    (the chassis' LeftFootDown/RightFootDown attachments). R15 arms use IKControls; R15 legs are solved
 --    here as two bones (hip + knee, knees bending forward towards Poses.KneePole) so they respect
 --    the knee's hinge; R6 limbs are single parts, so they are swung to point at the target.
 --    Hands and feet blend on and off the bike instead of snapping.
@@ -26,6 +27,8 @@ local LIMBS = {
 	{ kind = "grip", side = "Right", target = "RightGrip", chain = { "RightUpperArm", "RightHand" }, r6 = "RightShoulder", r6End = "RightGripAttachment" },
 	{ kind = "feet", side = "Left", target = "LeftPedal", hip = "LeftHip", knee = "LeftKnee", ankle = "LeftAnkle", foot = "LeftFoot", r6 = "LeftHip", r6End = "LeftFootAttachment" },
 	{ kind = "feet", side = "Right", target = "RightPedal", hip = "RightHip", knee = "RightKnee", ankle = "RightAnkle", foot = "RightFoot", r6 = "RightHip", r6End = "RightFootAttachment" },
+	{ kind = "down", side = "Left", target = "LeftFootDown", hip = "LeftHip", knee = "LeftKnee", ankle = "LeftAnkle", foot = "LeftFoot", r6 = "LeftHip", r6End = "LeftFootAttachment" },
+	{ kind = "down", side = "Right", target = "RightFootDown", hip = "RightHip", knee = "RightKnee", ankle = "RightAnkle", foot = "RightFoot", r6 = "RightHip", r6End = "RightFootAttachment" },
 }
 -- R6 limbs are one part each: knees and elbows fold into the hip/shoulder above them.
 local R6_FOLD = { LeftKnee = "LeftHip", RightKnee = "RightHip", LeftElbow = "LeftShoulder", RightElbow = "RightShoulder" }
@@ -81,6 +84,8 @@ end
 local function reaches(pose, limb)
 	if limb.kind == "grip" then
 		return pose.grip == true
+	elseif limb.kind == "down" then
+		return pose.footDown == limb.side
 	end
 	return pose.feet == true or pose.feet == limb.side
 end
@@ -193,7 +198,7 @@ local function makeLimbs(character, r6, bike, chassis)
 		end
 	end
 	for _, def in LIMBS do
-		local holder = if def.kind == "grip" then bars else crank
+		local holder = if def.kind == "grip" then bars elseif def.kind == "down" then chassis else crank
 		local target = holder and holder:FindFirstChild(def.target)
 		local limb = nil
 		if target and r6 then
@@ -326,8 +331,18 @@ local function legRotations(leg)
 end
 
 -- Blend hands/feet weights; returns { [jointName] = { rotation, weight } } for the solved joints.
+-- A leg moving between the pedal and the ground has two solves at once: they blend by weight.
 local function stepLimbs(state, pose, alpha)
 	local solved = {}
+	local function put(name, rotation, weight)
+		local other = solved[name]
+		if other then
+			local total = other[2] + weight
+			solved[name] = { other[1]:Lerp(rotation, weight / total), math.min(total, 1) }
+		else
+			solved[name] = { rotation, weight }
+		end
+	end
 	for _, limb in state.limbs do
 		local goal = if reaches(pose, limb.def) then 1 else 0
 		limb.weight += (goal - limb.weight) * alpha
@@ -335,11 +350,11 @@ local function stepLimbs(state, pose, alpha)
 			limb.ik.Weight = limb.weight
 		elseif limb.weight > 0.001 then
 			if limb.aim then
-				solved[limb.def.r6] = { aimRotation(limb.aim), limb.weight }
+				put(limb.def.r6, aimRotation(limb.aim), limb.weight)
 			else
 				local hipTurn, kneeTurn = legRotations(limb.leg)
-				solved[limb.def.hip] = { hipTurn, limb.weight }
-				solved[limb.def.knee] = { kneeTurn, limb.weight }
+				put(limb.def.hip, hipTurn, limb.weight)
+				put(limb.def.knee, kneeTurn, limb.weight)
 			end
 		end
 	end

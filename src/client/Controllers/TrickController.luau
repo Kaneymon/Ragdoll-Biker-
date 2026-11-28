@@ -146,7 +146,7 @@ local function stepActive(dt)
 	end
 end
 
--- Rider pose: the trick in progress, a tuck while flipping, otherwise riding.
+-- Rider pose: the trick in progress, a tuck while flipping, a foot down when stopped, otherwise riding.
 local function currentPose()
 	if active and active.def.pose then
 		return active.def.pose
@@ -154,6 +154,9 @@ local function currentPose()
 	local move = Input.move()
 	if State.phase == "Air" and (math.abs(move.Z) > SPIN_INPUT or math.abs(move.X) > SPIN_INPUT) then
 		return Tricks.SpinPose
+	end
+	if BikeController.standing() then
+		return "Stand"
 	end
 	return "Ride"
 end
@@ -165,7 +168,7 @@ local function step(dt)
 	elseif State.phase == "Ragdoll" then
 		stepActive(dt)
 	end
-	if State.character and State.isRiding() then
+	if State.character and (State.isRiding() or State.phase == "Ready") then
 		RiderPose.blend(State.character, currentPose())
 	end
 end

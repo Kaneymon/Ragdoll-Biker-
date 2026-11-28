@@ -11,6 +11,7 @@ local Progression = require(Shared.Logic.Progression)
 local Location = require(Shared.Logic.Location)
 local MapGeometry = require(Shared.Logic.MapGeometry)
 local Ragdoll = require(Shared.Logic.Ragdoll)
+local BikeWreck = require(Shared.Logic.BikeWreck)
 local RiderPose = require(Shared.Logic.RiderPose)
 local DataService = require(script.Parent.DataService)
 local WorldService = require(script.Parent.WorldService)
@@ -155,6 +156,7 @@ function BikeService.detach(player)
 			weld:Destroy()
 		end
 		bikes[player] = nil
+		BikeWreck.loosen(bike)
 		Debris:AddItem(bike, BIKE_LIFETIME_AFTER_BAIL)
 	end
 	if character then

@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local P = require(Shared.Config.Palette)
 local Bike = require(Shared.Config.Bike)
+local Poses = require(Shared.Config.Poses)
 local Build = require(script.Parent.Build)
 local GearBuilder = require(script.Parent.GearBuilder)
 
@@ -201,6 +202,13 @@ function BikeBuilder.build(gear)
 		grip.Parent = barsRoot
 	end
 	motor("Bars", chassis, barsRoot, POINTS.barsPivot)
+
+	for side, x in { Left = 1, Right = -1 } do -- where a foot goes down when stopped (Poses.FootDown)
+		local down = Instance.new("Attachment")
+		down.Name = side .. "FootDown"
+		down.Position = Poses.FootDown * Vector3.new(x, 1, 1)
+		down.Parent = chassis
+	end
 
 	local align = Instance.new("Attachment")
 	align.Name = "AlignAttachment"

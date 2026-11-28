@@ -4,9 +4,10 @@
 -- shoulders, see Logic/RiderPose), so the same pose bends R15 and R6 riders alike.
 -- grip = true: the hands reach for the handlebar grips (IK), whatever the arm angles say.
 -- feet = true (or "Left"/"Right" for one foot): the feet stay on the pedals (IK) as the cranks turn.
+-- footDown = "Left"/"Right": that foot reaches for the ground beside the bike (Poses.FootDown).
 -- Every pose lists the same joints so blending always has a target for each one.
-local function pose(offset, joints, grip, feet)
-	return { offset = offset, joints = joints, grip = grip, feet = feet }
+local function pose(offset, joints, grip, feet, footDown)
+	return { offset = offset, joints = joints, grip = grip, feet = feet, footDown = footDown }
 end
 
 return {
@@ -22,6 +23,10 @@ return {
 	PedalReach = { R15 = 0.95, R6 = 1.2 },
 	SeatLiftRange = { -0.4, 1.5 }, -- studs the seat may move for very short or very tall bodies
 	R6SeatForward = 0.7, -- R6 arms are short and can't bend: R6 riders stand further forward, nearer the bars
+	-- Where a foot put down goes, in chassis space for the left foot (x mirrored for the right):
+	-- just out from the bike and a little ahead of the seat, at ground level (Bike.Hover below the
+	-- chassis, a touch less since the bike leans onto that side, Bike.Stand).
+	FootDown = Vector3.new(-1.35, -2.05, 0.4),
 
 	Ride = pose(CFrame.new(), {
 		LeftHip = { 70, 0, -6 }, RightHip = { 70, 0, 6 },
@@ -30,6 +35,15 @@ return {
 		LeftElbow = { 15, 0, 0 }, RightElbow = { 15, 0, 0 },
 		Waist = { -20, 0, 0 },
 	}, true, true),
+	-- Stopped: left foot down on the ground, right foot on its pedal, hands on the bars, hips
+	-- shifted towards the foot that's down and the body kept upright against the bike's lean.
+	Stand = pose(CFrame.new(-0.3, -0.45, 0.1) * CFrame.Angles(0, 0, math.rad(-6)), {
+		LeftHip = { 15, 0, -12 }, RightHip = { 70, 0, 6 },
+		LeftKnee = { -10, 0, 0 }, RightKnee = { -80, 0, 0 },
+		LeftShoulder = { 70, 0, 10 }, RightShoulder = { 70, 0, -10 },
+		LeftElbow = { 20, 0, 0 }, RightElbow = { 20, 0, 0 },
+		Waist = { -10, 0, 0 },
+	}, true, "Right", "Left"),
 	Tuck = pose(CFrame.new(0, -0.3, 0.2), {
 		LeftHip = { 110, 0, -10 }, RightHip = { 110, 0, 10 },
 		LeftKnee = { -120, 0, 0 }, RightKnee = { -120, 0, 0 },

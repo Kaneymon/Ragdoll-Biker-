@@ -14,6 +14,7 @@ local Build = require(script.Parent.Build)
 local Props = require(script.Parent.Props)
 local RampKit = require(script.Parent.RampKit)
 local TerrainBuilder = require(script.Parent.TerrainBuilder)
+local ZFight = require(script.Parent.ZFight)
 
 local MapBuilder = {}
 
@@ -53,20 +54,25 @@ end
 local PATH_CLEARANCE = 8 -- props keep this far from the path's edge
 local FOOTPRINT_SHARE = 0.75 -- how much of a prop's width counts when keeping props apart
 local END_WALL_INSET = 8 -- end wall / house fronts sit this far in front of the end fence
+-- No two flat faces share a plane where they overlap (that flickers, "z-fighting"): overlapping
+-- floor decals and path strips are lifted by a little more each, in turn.
+local DECAL_LAYER = 0.02
+local STRIP_LAYER = 0.015
 
--- Fills the space under a straight line from (zA, yA) down to (zB, yB) with wedges on top and
--- boxes below, down to floorY. Split so no piece is too big.
+-- Fills the space under a straight line from (zA, yA) to (zB, yB) (downhill or up) with wedges
+-- on top and boxes below, down to floorY. Split so no piece is too big.
 local function fillUnder(model, name, x, width, zA, yA, zB, yB, floorY, color, material)
-	local steps = math.max(1, math.ceil(math.max(zB - zA, yA - yB) / CHUNK))
+	local steps = math.max(1, math.ceil(math.max(zB - zA, math.abs(yA - yB)) / CHUNK))
 	for i = 0, steps - 1 do
 		local z0, z1 = zA + (zB - zA) * i / steps, zA + (zB - zA) * (i + 1) / steps
 		local y0, y1 = yA + (yB - yA) * i / steps, yA + (yB - yA) * (i + 1) / steps
-		local depth, drop = z1 - z0, y0 - y1
-		if drop > 0.05 then
-			Build.part({ Name = name, Size = Vector3.new(width, drop, depth), CFrame = CFrame.new(x, y1 + drop / 2, (z0 + z1) / 2) * CFrame.Angles(0, math.pi, 0), Color = color, Material = material, Parent = model }, "WedgePart")
+		local depth, drop, low = z1 - z0, math.abs(y0 - y1), math.min(y0, y1)
+		if drop > 0.05 then -- a wedge rises towards +Z unless turned round
+			local turn = if y0 > y1 then CFrame.Angles(0, math.pi, 0) else CFrame.identity
+			Build.part({ Name = name, Size = Vector3.new(width, drop, depth), CFrame = CFrame.new(x, low + drop / 2, (z0 + z1) / 2) * turn, Color = color, Material = material, Parent = model }, "WedgePart")
 		end
-		if y1 - floorY > 0.05 then
-			Build.tiled({ Name = name, Size = Vector3.new(width, y1 - floorY, depth), CFrame = CFrame.new(x, (y1 + floorY) / 2, (z0 + z1) / 2), Color = color, Material = material, Parent = model })
+		if low - floorY > 0.05 then
+			Build.tiled({ Name = name, Size = Vector3.new(width, low - floorY, depth), CFrame = CFrame.new(x, (low + floorY) / 2, (z0 + z1) / 2), Color = color, Material = material, Parent = model })
 		end
 	end
 end
@@ -93,8 +99,11 @@ local function buildGround(def, g, model, floorY)
 	local backZ, parkEnd = g.origin.Z - BACK_LENGTH, g.landEnd.Z + PARK_LENGTH
 	-- flat ground around the kicker, solid down to the floor
 	fillUnder(model, "Ground", g.origin.X, width, backZ, g.bottom.Y - 0.4, g.landStart.Z, g.bottom.Y - 0.4, floorY, theme.groundDark, theme.material)
-	-- the landing slope, solid down to the floor
-	fillUnder(model, "LandingHill", g.origin.X, width, g.landStart.Z, g.landStart.Y, g.landEnd.Z, g.landEnd.Y, floorY, theme.ground, theme.material)
+	-- the landing slope (and its dips), solid down to the floor
+	for _, seg in MapGeometry.landSegments(g) do
+		local a, b = MapGeometry.landPoint(g, seg[1]), MapGeometry.landPoint(g, seg[2])
+		fillUnder(model, "LandingHill", g.origin.X, width, a.Z, a.Y, b.Z, b.Y, floorY, theme.ground, theme.material)
+	end
 	-- valley floor (also the park at the bottom of the slope)
 	Build.tiled({ Name = "Floor", Size = Vector3.new(width + FLOOR_MARGIN * 2, 20, parkEnd - backZ + FLOOR_MARGIN), CFrame = CFrame.new(g.origin.X, floorY - 10, (backZ + parkEnd) / 2), Color = theme.ground, Material = theme.material, Parent = model })
 end
@@ -105,10 +114,13 @@ local function groundProfile(g)
 		Vector2.new(g.origin.Z - BACK_LENGTH, g.origin.Y),
 		Vector2.new(g.origin.Z, g.origin.Y),
 		Vector2.new(g.bottom.Z, g.bottom.Y),
-		Vector2.new(g.landStart.Z, g.bottom.Y),
-		Vector2.new(g.landEnd.Z, g.landEnd.Y),
-		Vector2.new(g.landEnd.Z + PARK_LENGTH, g.landEnd.Y),
 	}
+	for _, seg in MapGeometry.landSegments(g, 4) do
+		local p = MapGeometry.landPoint(g, seg[1])
+		table.insert(points, Vector2.new(p.Z, p.Y))
+	end
+	table.insert(points, Vector2.new(g.landEnd.Z, g.landEnd.Y))
+	table.insert(points, Vector2.new(g.landEnd.Z + PARK_LENGTH, g.landEnd.Y))
 	local function heightAt(z)
 		for i = 1, #points - 1 do
 			local a, b = points[i], points[i + 1]
@@ -197,9 +209,41 @@ local function buildFences(def, g, model)
 			Build.part({ Name = "FencePost", Size = Vector3.new(0.9, 4.5, 0.9), CFrame = CFrame.new(from + dir * (i * length / posts) + Vector3.new(0, 2.25, 0)), Color = P.White, Parent = folder })
 		end
 	end
+	-- mesh fence pieces down the slope, end to end along the ground (through the dips too)
+	local function slopeMeshLine(x)
+		local fence = def.fenceMesh
+		local marks, total, prev = {}, 0, MapGeometry.landPoint(g, 0)
+		for along = 0, def.landing.length, 2 do
+			local p = MapGeometry.landPoint(g, along)
+			total += (p - prev).Magnitude
+			prev = p
+			table.insert(marks, { along, total })
+		end
+		local count = math.max(1, math.floor(total / fence.length))
+		local step, m = total / count, 1
+		for i = 0, count - 1 do
+			local want = (i + 0.5) * step
+			while m < #marks - 1 and marks[m + 1][2] < want do
+				m += 1
+			end
+			local a, b = marks[m], marks[m + 1]
+			local along = a[1] + (b[1] - a[1]) * math.clamp((want - a[2]) / math.max(b[2] - a[2], 1e-3), 0, 1)
+			local dir = (MapGeometry.landPoint(g, along + 0.5) - MapGeometry.landPoint(g, along - 0.5)).Unit
+			local piece = PROP_BUILDERS[fence.key].build(Random.new(i))
+			piece:PivotTo(CFrame.fromMatrix(MapGeometry.landPoint(g, along) + x, dir, MapGeometry.landNormalAt(g, along)))
+			piece.Parent = folder
+		end
+	end
 	for _, side in { -1, 1 } do
 		local x = Vector3.new(side * half, 0, 0)
-		fenceLine(g.landStart + x, g.landEnd + x, g.landNormal)
+		if def.fenceMesh then
+			slopeMeshLine(x)
+		else
+			for _, seg in MapGeometry.landSegments(g) do
+				local a, b = MapGeometry.landPoint(g, seg[1]), MapGeometry.landPoint(g, seg[2])
+				fenceLine(a + x, b + x, (b - a).Unit:Cross(Vector3.xAxis).Unit)
+			end
+		end
 		fenceLine(g.landEnd + x, g.landEnd + x + Vector3.new(0, 0, PARK_LENGTH - FENCE_INSET), Vector3.yAxis)
 	end
 	local endZ = Vector3.new(0, 0, PARK_LENGTH - FENCE_INSET)
@@ -216,7 +260,10 @@ local function stripe(g, folder, name, x, width, color, material)
 		end
 	end
 	local offset = Vector3.new(x, 0, 0)
-	piece(g.landStart + offset, g.landEnd + offset, g.landNormal)
+	for _, seg in MapGeometry.landSegments(g) do
+		local a, b = MapGeometry.landPoint(g, seg[1]), MapGeometry.landPoint(g, seg[2])
+		piece(a + offset, b + offset, (b - a).Unit:Cross(Vector3.xAxis).Unit)
+	end
 	piece(g.landEnd + offset, g.landEnd + offset + Vector3.new(0, 0, PARK_LENGTH), Vector3.yAxis)
 end
 
@@ -236,11 +283,11 @@ local function buildDecals(def, g, model, rng)
 		return
 	end
 	local folder = Build.model("Decals", model)
-	for _ = 1, spec.count do
+	for i = 1, spec.count do
 		local along = rng:NextNumber(60, def.landing.length - 30)
 		local x = rng:NextNumber(spec.area[1], spec.area[2]) * (if rng:NextNumber() < 0.5 then -1 else 1)
-		local at = g.landStart + g.landDown * along + Vector3.new(x, 0, 0)
-		local holder = Build.decor({ Name = "Graffiti", Size = Vector3.new(spec.size, 0.05, spec.size / 2), Transparency = 1, CFrame = Build.onSurface(at, g.landNormal) * CFrame.new(0, 0.26, 0) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0), Parent = folder })
+		local at = MapGeometry.landPoint(g, along) + Vector3.new(x, 0, 0)
+		local holder = Build.decor({ Name = "Graffiti", Size = Vector3.new(spec.size, 0.05, spec.size / 2), Transparency = 1, CFrame = Build.onSurface(at, MapGeometry.landNormalAt(g, along)) * CFrame.new(0, 0.26 + (i % 8) * DECAL_LAYER, 0) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0), Parent = folder })
 		local decal = Instance.new("Decal")
 		decal.Face = Enum.NormalId.Top
 		decal.Texture = images[rng:NextInteger(1, #images)]
@@ -330,19 +377,22 @@ local function buildPath(def, g, model)
 		local down = along - side * path.width / 2 * slope / length
 		return g.landStart + g.landDown * down + Vector3.new(x, 0, 0)
 	end
-	local function strip(name, a, b, width, height, color, material)
+	-- strips overlap their neighbours a little (no gaps on the bends): every other one sits a
+	-- touch higher so the overlaps don't flicker
+	local function strip(name, a, b, width, height, color, material, layer)
 		local length = (b - a).Magnitude
 		local frame = CFrame.fromMatrix((a + b) / 2, g.landNormal:Cross((b - a).Unit).Unit, g.landNormal)
-		Build.decor({ Name = name, Size = Vector3.new(width, height, length + width * 0.6), CFrame = frame * CFrame.new(0, height / 2, 0), Color = color, Material = material, Parent = folder })
+		local lift = (layer % 2) * STRIP_LAYER
+		Build.decor({ Name = name, Size = Vector3.new(width, height + lift, length + width * 0.6), CFrame = frame * CFrame.new(0, (height + lift) / 2, 0), Color = color, Material = material, Parent = folder })
 	end
 	-- start a little way down the slope: right at the top the slope meets the flat ground, and a
 	-- tilted strip there would stick up out of it
 	local steps = math.floor((def.landing.length - path.start) / path.segment)
 	for i = 0, steps - 1 do
 		local a, b = path.start + i * path.segment, path.start + (i + 1) * path.segment
-		strip("PathStone", point(a, 0), point(b, 0), path.width, 0.3, P.PathStone, Enum.Material.Pebble)
+		strip("PathStone", point(a, 0), point(b, 0), path.width, 0.3, P.PathStone, Enum.Material.Pebble, i)
 		for _, side in { -1, 1 } do
-			strip("Bricks", point(a, side), point(b, side), path.brick, path.brick * 0.6, P.Brick, Enum.Material.Brick)
+			strip("Bricks", point(a, side), point(b, side), path.brick, path.brick * 0.6, P.Brick, Enum.Material.Brick, i)
 		end
 	end
 end
@@ -395,7 +445,7 @@ local function placeProps(def, g, model)
 			local along = rng:NextNumber(80, def.landing.length + PARK_LENGTH - 40)
 			local onSlope = along <= def.landing.length
 			local position = if onSlope
-				then g.landStart + g.landDown * along
+				then MapGeometry.landPoint(g, along)
 				else g.landEnd + Vector3.new(0, 0, along - def.landing.length)
 			local x = if area
 				then rng:NextNumber(area[1], math.min(area[2], half)) * (if rng:NextNumber() < 0.5 then -1 else 1)
@@ -404,7 +454,7 @@ local function placeProps(def, g, model)
 				continue
 			end
 			position += Vector3.new(x, 0, 0)
-			local normal = if onSlope and not builder.upright then g.landNormal else Vector3.yAxis
+			local normal = if onSlope and not builder.upright then MapGeometry.landNormalAt(g, along) else Vector3.yAxis
 			local turn = if builder.facing then 0 else rng:NextNumber(0, math.pi * 2)
 			local prop = builder.build(rng, def.theme)
 			local radius = footprint(prop) + (def.propGap or 0) / 2
@@ -468,6 +518,7 @@ function MapBuilder.build(def, parent, options)
 		buildEndWall(def, g, model)
 	end
 	placeProps(def, g, model)
+	ZFight.fix(model)
 	model.Parent = parent
 	return model
 end

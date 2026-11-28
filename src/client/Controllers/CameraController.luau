@@ -21,16 +21,19 @@ local shake = 0
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Include
 
+-- What to follow: the bailed body, else the bike, else the character (never a part that's gone).
 local function subject()
 	local character = RagdollController.character()
-	if character then
-		return Ragdoll.core(character)
+	local core = character and character.Parent and Ragdoll.core(character)
+	if core and core.Parent then
+		return core
 	end
 	local chassis = BikeController.chassis()
-	if chassis then
+	if chassis and chassis.Parent then
 		return chassis
 	end
-	return State.character and Ragdoll.core(State.character)
+	core = State.character and Ragdoll.core(State.character)
+	return if core and core.Parent then core else nil
 end
 
 local function limitPitch(v)

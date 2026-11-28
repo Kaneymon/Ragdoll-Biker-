@@ -44,6 +44,25 @@ function BikeController.speed()
 	return ride and ride.chassis.AssemblyLinearVelocity.Magnitude or 0
 end
 
+-- Stopped on the bike: waiting at the top of the ramp, or barely moving and not pedalling or
+-- crouching for a hop. The rider puts a foot down (Config/Poses Stand).
+function BikeController.standing(): boolean
+	if not ride or ride.charge then
+		return false
+	end
+	if State.phase == "Ready" then
+		return Input.move().Z > -0.3
+	end
+	return State.phase == "Riding" and ride.speed < Bike.Stand.Speed and Input.move().Z > -0.1
+end
+
+-- Leaning onto the foot that's down when stopped (blends back upright when riding off).
+local function stepLean(dt)
+	local goal = if BikeController.standing() then Bike.Stand.Lean else 0
+	ride.lean += (goal - ride.lean) * (1 - math.exp(-dt * Bike.Stand.LeanRate))
+	return CFrame.Angles(0, 0, math.rad(ride.lean))
+end
+
 -- Air step ------------------------------------------------------------------
 local function land(hit)
 	local chassis = ride.chassis
@@ -53,6 +72,10 @@ local function land(hit)
 	local upright = cf.UpVector:Dot(n) >= math.cos(math.rad(Bike.CrashAngle))
 	local straight = planar.Magnitude < 20 or (look.Magnitude > 0.1 and look.Unit:Dot(planar.Unit) >= math.cos(math.rad(Bike.SideslipAngle)))
 	ride.hop = nil
+	-- how hard it hit: the frame before touching down (contact may already have slowed the bike)
+	-- or a share of the straight-down speed, so slope landings bounce too
+	local before = ride.airVel or velocity
+	local impact = math.max(-velocity:Dot(n), -before:Dot(n), -before.Y * Bike.LandBounce.fall, 0)
 	if upright and straight and not State.run.trickBusy then
 		ride.heading = flat(look)
 		ride.speed = math.max(0, velocity:Dot(look.Unit))
@@ -62,13 +85,17 @@ local function land(hit)
 		-- then the suspension takes the hit and bounces back up
 		chassis.CFrame += n * (Bike.Hover - (chassis.Position - hit.Position):Dot(n))
 		chassis.AssemblyLinearVelocity = planar
+		local spec = Bike.LandBounce
 		ride.bounce = 0
-		ride.bounceSpeed = math.min(-velocity:Dot(n) * Bike.LandBounce.share, Bike.LandBounce.max)
+		ride.bounceSpeed = math.min(impact * spec.share, spec.max)
+		if ride.airTime >= spec.airTime then
+			ride.bounceSpeed = math.max(ride.bounceSpeed, spec.min)
+		end
 		-- still holding Hop: crouch straight away for the next bunnyhop
 		ride.charge = if State.rules().hop and Input.isDown("Hop") then 0 else nil
 		ride.chargeMove = Input.move()
 		State.setPhase("Riding")
-		State.Landed:Fire(-velocity:Dot(n))
+		State.Landed:Fire(impact)
 	else
 		State.RequestBail:Fire("crash")
 	end
@@ -121,13 +148,16 @@ local function stepAir(dt)
 		chassis.AssemblyLinearVelocity += cf.LookVector * BikeController.boostAccel * dt
 	end
 	ride.grace -= dt
+	ride.airTime += dt
 	if ride.grace <= 0 then
 		local fallSpeed = math.max(0, -chassis.AssemblyLinearVelocity.Y)
 		local hit = cast(-UP, Bike.Hover + 0.5 + fallSpeed * dt * 2)
 		if hit then
 			land(hit)
+			return
 		end
 	end
+	ride.airVel = chassis.AssemblyLinearVelocity
 end
 
 -- Ground step ---------------------------------------------------------------
@@ -137,6 +167,7 @@ local function leaveGround(popNormal, fromKicker)
 	ride.charge, ride.popQueued = nil, false
 	ride.align.Enabled = false
 	ride.grace = Bike.LeaveGroundGrace
+	ride.airTime, ride.airVel = 0, nil
 	if popNormal then
 		local pop = State.stats.jumpHeight + (if fromKicker then ride.speed * Bike.LaunchPopPerSpeed else 0)
 		ride.chassis.AssemblyLinearVelocity += popNormal * pop
@@ -160,6 +191,10 @@ local function stepBounce(dt)
 	local spec = Bike.LandBounce
 	ride.bounceSpeed += (-spec.stiffness * ride.bounce - spec.damping * ride.bounceSpeed) * dt
 	ride.bounce += ride.bounceSpeed * dt
+	if ride.bounce < -spec.sag then -- bottomed out: kick back up instead of sinking the wheels
+		ride.bounce = -spec.sag
+		ride.bounceSpeed = math.max(ride.bounceSpeed, -ride.bounceSpeed * spec.rebound)
+	end
 end
 
 local function stepIdle(dt)
@@ -189,6 +224,7 @@ local function popHop(forward, n)
 	ride.charge, ride.popQueued = nil, false
 	ride.align.Enabled = false
 	ride.grace = Bike.LeaveGroundGrace
+	ride.airTime, ride.airVel = 0, nil
 	ride.hop = { nose = spec.NoseTime, lockPitch = move.Z * held.Z > 0.01, lockRoll = move.X * held.X > 0.01 }
 	ride.chassis.AssemblyLinearVelocity = forward * ride.speed + n * pop
 	State.setPhase("Air")
@@ -224,7 +260,7 @@ local function stepGround(dt)
 	ride.speed = math.clamp(ride.speed + accel * dt, 0, Bike.MaxSpeed * State.stats.speedMult)
 
 	stepBounce(dt)
-	ride.align.CFrame = CFrame.lookAt(Vector3.zero, forward, n)
+	ride.align.CFrame = CFrame.lookAt(Vector3.zero, forward, n) * stepLean(dt)
 	if ride.popQueued then
 		popHop(forward, n)
 		return
@@ -237,10 +273,11 @@ local function stepGround(dt)
 	stepIdle(dt)
 end
 
-local function stepReady()
+local function stepReady(dt)
 	local chassis = ride.chassis
 	chassis.AssemblyLinearVelocity = (ride.hold.Position - chassis.Position) * 10
 	chassis.AssemblyAngularVelocity = Vector3.zero
+	ride.align.CFrame = ride.hold.Rotation * stepLean(dt)
 	if Input.move().Z < -0.3 or ride.charge then
 		State.setPhase("Riding")
 	end
@@ -313,6 +350,9 @@ function BikeController.attach(bike: Model, isCurrent: () -> boolean): boolean
 		popQueued = false, -- Hop let go: pop on the next ground step
 		hop = nil, -- in the air off a bunnyhop (see noseAuto, airMove)
 		grace = 0,
+		airTime = 0, -- seconds in the air this jump
+		airVel = nil, -- chassis velocity last air step (the landing bounce reads it)
+		lean = 0, -- degrees leaned onto the foot that's down (stepLean)
 		idle = 0,
 		blocked = 0,
 		wheelAngle = 0,

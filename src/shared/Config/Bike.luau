@@ -26,9 +26,24 @@ return {
 	PedalGearRatio = 2.2, -- wheel turns per pedal turn (pedals only spin while pedalling)
 	PedalMaxSpin = 14, -- radians/sec cap so pedals stay readable at high speed
 	AutoBailIdle = 3, -- seconds stopped on the bike before auto-bail (where bailing is allowed)
-	-- Landing bounce: the suspension springs (studs/s of landing speed -> bounce speed, capped),
-	-- as a damped spring on the ride height (a hard landing lifts it about a stud).
-	LandBounce = { share = 0.25, max = 14, stiffness = 70, damping = 6 },
+	-- Landing bounce: the suspension springs back up after a landing, as a damped spring on the
+	-- ride height. Impact = the speed into the ground (the frame before touching down) or `fall`
+	-- x the straight-down speed, whichever is bigger (a slope landing barely hits the slope's
+	-- normal); bounce speed = share x impact, between min (after AirTime of air) and max.
+	-- About 2 studs up on a hard landing, then a smaller second bounce. Coming back down it only
+	-- squashes `sag` studs below ride height (the wheels never sink into the ground), then springs
+	-- back up with `rebound` of the speed it came down with.
+	LandBounce = { share = 0.35, fall = 0.3, min = 9, max = 20, airTime = 0.35, stiffness = 55, damping = 3.5, sag = 0.3, rebound = 0.45 },
+	-- Stopped on the bike (Ready at the top of a ramp, or riding slower than Speed and not
+	-- pedalling): the rider puts a foot down (Config/Poses Stand) and the bike leans that way by
+	-- Lean degrees, blending at LeanRate.
+	Stand = { Speed = 2.5, Lean = 9, LeanRate = 6 },
+	-- After a bail the empty bike tumbles on its own: real collisions on the frame and wheels
+	-- (the wheels spin freely), with these surfaces.
+	Wreck = {
+		Frame = { Density = 2, Friction = 0.5, Elasticity = 0.25, FrictionWeight = 1, ElasticityWeight = 1 },
+		Tyre = { Density = 1.2, Friction = 0.9, Elasticity = 0.4, FrictionWeight = 1, ElasticityWeight = 1 },
+	},
 	-- Ragdoll steering: Accel pushes you camera-relative, Spin tumbles you (both x control).
 	-- In the air, control = Helmet airControl, rising to full (1) as speed nears FullSpeed while
 	-- airControl is below 1 (Helmet level 20 = always full, like the original steering).

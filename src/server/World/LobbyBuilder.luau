@@ -14,6 +14,7 @@ local MegaRamp = require(Shared.Config.MegaRamp)
 local Localize = require(Shared.Services.Localize)
 local Build = require(script.Parent.Build)
 local RampKit = require(script.Parent.RampKit)
+local ZFight = require(script.Parent.ZFight)
 
 local LobbyBuilder = {}
 
@@ -274,6 +275,7 @@ function LobbyBuilder.build(parent)
 	link.Name = "ObbyFinish"
 	link.Value = finish
 	link.Parent = model
+	ZFight.fix(model)
 	model.Parent = parent
 	return model
 end
