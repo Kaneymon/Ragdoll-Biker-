@@ -14,6 +14,7 @@ local MegaRamp = require(Shared.Config.MegaRamp)
 local Localize = require(Shared.Services.Localize)
 local Build = require(script.Parent.Build)
 local RampKit = require(script.Parent.RampKit)
+local ZFight = require(script.Parent.ZFight)
 
 local LobbyBuilder = {}
 
@@ -198,7 +199,7 @@ local function buildAfk(model)
 	local spec = Lobby.afk
 	local folder = Build.model("Afk", model)
 	local centre = onDeck(spec.angle, spec.distance)
-	local rug = Build.part({ Name = "AfkZone", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.4, spec.radius * 2, spec.radius * 2), CFrame = CFrame.new(centre + Vector3.yAxis * 0.2) * SIDEWAYS, Color = Color3.fromRGB(70, 80, 160), Material = Enum.Material.Fabric, CanCollide = false, Parent = folder })
+	local rug = Build.part({ Name = "AfkZone", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.4, spec.radius * 2, spec.radius * 2), CFrame = CFrame.new(centre + Vector3.yAxis * 0.2) * SIDEWAYS, Transparency = 1, CanCollide = false, Parent = folder })
 	local holder = Instance.new("Attachment")
 	holder.Position = Vector3.new(14, 0, 0) -- (cylinder space: X is up)
 	holder.Parent = rug
@@ -209,13 +210,14 @@ local function buildAfk(model)
 	billboard.Parent = holder
 	label(billboard, Localize.get("AFK_TITLE"), UDim2.fromScale(1, 0.6), nil, P.Sun)
 	label(billboard, Localize.get("AFK_SUBTITLE"), UDim2.fromScale(1, 0.4), UDim2.fromScale(0, 0.6), P.White)
-	for i = 1, spec.beanbags do
-		local a = (i / spec.beanbags) * 2 * math.pi
-		local at = centre + Vector3.new(math.cos(a), 0, math.sin(a)) * (spec.radius * 0.7)
-		local bag = scaled(asset("Beanbag"), 1.4)
-		bag:PivotTo(CFrame.lookAt(at, Vector3.new(centre.X, at.Y, centre.Z)))
-		bag.Parent = folder
-	end
+	-- The skatepark set (tread plate floor, plywood deck, fences, pipe bench and grind box, with
+	-- invisible Seats on the bench and box) is a hand-placed model pivoted at the middle of its
+	-- floor. Its open side points `openSide` degrees round from +X in model space; turn it to face
+	-- the middle of the deck. The plywood deck covers the rug, so the rug is only the payout area.
+	local set = asset("AfkSkatepark")
+	local toMiddle = Lobby.centre - centre
+	set:PivotTo(CFrame.new(centre) * CFrame.Angles(0, math.rad(spec.openSide) - math.atan2(toMiddle.Z, toMiddle.X), 0))
+	set.Parent = folder
 end
 
 -- Obby ---------------------------------------------------------------------------------------------
@@ -273,6 +275,7 @@ function LobbyBuilder.build(parent)
 	link.Name = "ObbyFinish"
 	link.Value = finish
 	link.Parent = model
+	ZFight.fix(model)
 	model.Parent = parent
 	return model
 end

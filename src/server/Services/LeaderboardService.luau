@@ -16,6 +16,7 @@ local STORE_PREFIX = "Leaderboard_"
 local FIRST_REFRESH = 5 -- seconds after start, once profiles have loaded
 local FORMATTERS = { money = Format.money, number = Format.number }
 local names = {} -- userId -> display name cache
+local stores = {} -- board id -> OrderedDataStore (nil = use this server's players)
 
 local function nameOf(userId)
 	if not names[userId] then
@@ -30,7 +31,8 @@ local function scoreOf(profile, spec)
 end
 
 -- Top entries { name, score } from the global store, or nil if it can't be reached.
-local function globalTop(store, spec)
+local function globalTop(spec)
+	local store = stores[spec.id]
 	if not store then
 		return nil
 	end
@@ -42,6 +44,9 @@ local function globalTop(store, spec)
 	end
 	local ok, pages = pcall(store.GetSortedAsync, store, false, Lobby.size)
 	if not ok then
+		if tostring(pages):find("Studio access") then
+			stores[spec.id] = nil -- Studio API access is off: rank this server only, stop asking
+		end
 		return nil
 	end
 	local top = {}
@@ -77,7 +82,6 @@ end
 function LeaderboardService.start()
 	local lobby = workspace:WaitForChild("World"):WaitForChild("Lobby")
 	local boards = lobby:WaitForChild("Boards")
-	local stores = {}
 	for _, spec in Lobby.boards do
 		local ok, store = pcall(DataStoreService.GetOrderedDataStore, DataStoreService, STORE_PREFIX .. spec.id)
 		stores[spec.id] = ok and store or nil
@@ -88,7 +92,7 @@ function LeaderboardService.start()
 			for _, spec in Lobby.boards do
 				local board = boards:FindFirstChild(spec.id)
 				if board then
-					show(board, spec, globalTop(stores[spec.id], spec) or serverTop(spec))
+					show(board, spec, globalTop(spec) or serverTop(spec))
 				end
 			end
 			task.wait(Lobby.refresh)

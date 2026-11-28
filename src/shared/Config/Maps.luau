@@ -14,6 +14,8 @@
 -- propGap = extra studs kept between props. fenceMesh = Config/MeshProps key used for the
 --   perimeter fence (one segment every `length` studs) instead of plain rails.
 -- decals = images from Config/Decals scattered on the floor ({ set, count, size, area }).
+-- landing.dips = big roll-in / roll-out hollows across the whole landing slope
+--   ({ at = studs down the slope, length, depth }, see Logic/MapGeometry).
 -- endWall = what closes off the bottom of the park: { wall = MeshProps key, column = MeshProps key
 --   between sections (optional) } or { houses = true } for a row of house fronts.
 -- terrain = the ground is Roblox terrain (World/TerrainBuilder) instead of parts: the ride line with
@@ -61,7 +63,16 @@ return {
 			origin = Vector3.new(SPACING * 1, 1705, 0), seed = 11,
 			ramp = { angle = 32, length = 1360, width = 50, thickness = 8 },
 			runout = 70, kicker = { radius = 120, endAngle = 40, segments = 12 }, gap = 70,
-			landing = { angle = 14, length = 5100, width = 420 },
+			landing = {
+				angle = 14, length = 5100, width = 420,
+				-- steepest roll-in about 33 degrees, rolling out about 8 degrees uphill
+				dips = {
+					{ at = 1100, length = 360, depth = 45 },
+					{ at = 2150, length = 320, depth = 38 },
+					{ at = 3250, length = 380, depth = 48 },
+					{ at = 4250, length = 320, depth = 40 },
+				},
+			},
 			theme = theme(P.Grass, P.GrassDark, P.Grape, P.Sky, Enum.Material.Grass),
 			surfaces = { { width = 270, color = P.ConcreteFloor, material = Enum.Material.Concrete } },
 			props = {

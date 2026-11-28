@@ -36,7 +36,11 @@ tools/checksums.py  prints a checksum per script, used to check Studio matches t
 Install Rojo and run `rojo serve`, then connect from the Rojo Studio plugin. The Hill & Park map is baked
 into the place (`Workspace.World.hill_park`); if it is deleted, `WorldService` rebuilds it from `Config/Maps.luau`.
 
-Place settings the code relies on: `Workspace.FallenPartsDestroyHeight = -2000`, mouse lock off.
+Place settings the code relies on: `Workspace.FallenPartsDestroyHeight = -2000`, mouse lock off,
+`Workspace.StreamingEnabled = true` (min radius 512, target 2048, MinimumRadiusPause). Without streaming
+every client downloads all six maps and the Mountain's terrain before a playtest can start.
+The baked map models (`Workspace.World.<map>`) need `LevelOfDetail = Disabled`: with StreamingMesh the
+map you're riding shows as a grey stand-in, because a map is bigger than the streaming radius.
 To keep progress in Studio tests, turn on Game Settings > Security > Enable Studio Access to API Services.
 
 ## Controls
@@ -46,7 +50,7 @@ To keep progress in Studio tests, turn on Game Settings > Security > Enable Stud
 | Pedal / brake / steer | W / S / A D | Left stick |
 | Flip (air) | W front flip, S backflip | Left stick |
 | Side flip (air) | A / D | Left stick |
-| Hop (ground) / Bail (air) | Space | A |
+| Bunnyhop (lobby: hold to crouch, let go to pop) / Bail (ramps) | Space | A |
 | Boost | Left Shift | R2 |
 | Explode | X | Y |
 | Tailwhip / Barspin | Q / E | L1 / R1 |

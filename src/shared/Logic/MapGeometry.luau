@@ -43,7 +43,62 @@ function MapGeometry.get(def)
 		landNormal = landNormal,
 		landStart = landStart,
 		landEnd = landEnd,
+		landLength = def.landing.length,
+		dips = def.landing.dips or {},
 	}
+end
+
+-- Landing slope dips (Config/Maps landing.dips): a smooth hollow `depth` studs deep and `length`
+-- studs long starting `at` studs down the slope: it rolls in steeper, bottoms out, then rolls back
+-- out (briefly uphill on the deep ones) onto the slope. Returns how far the ground is below the
+-- plain slope there, and how fast that changes per stud down the slope.
+local function dipAt(g, along: number)
+	for _, dip in g.dips do
+		local t = (along - dip.at) / dip.length
+		if t > 0 and t < 1 then
+			local w = math.pi * 2
+			return dip.depth * (1 - math.cos(w * t)) / 2, dip.depth * w * math.sin(w * t) / (2 * dip.length)
+		end
+	end
+	return 0, 0
+end
+
+-- The ground on the landing slope's centre line, `along` studs down it (dips included).
+function MapGeometry.landPoint(g, along: number): Vector3
+	return g.landStart + g.landDown * along - Vector3.yAxis * dipAt(g, along)
+end
+
+-- The ground's up direction there.
+function MapGeometry.landNormalAt(g, along: number): Vector3
+	local _, rate = dipAt(g, along)
+	return (g.landDown - Vector3.yAxis * rate):Cross(Vector3.xAxis).Unit
+end
+
+-- Straight pieces that follow the landing slope: { from, to } distances down it. One piece
+-- where it's plain, `perDip` pieces through each dip.
+function MapGeometry.landSegments(g, perDip: number?)
+	local cuts = { 0 }
+	local dips = table.clone(g.dips)
+	table.sort(dips, function(a, b)
+		return a.at < b.at
+	end)
+	for _, dip in dips do
+		local n = perDip or 16
+		for i = 0, n do
+			local at = dip.at + dip.length * i / n
+			if at > cuts[#cuts] + 1e-3 and at < g.landLength then
+				table.insert(cuts, at)
+			end
+		end
+	end
+	if g.landLength > cuts[#cuts] + 1e-3 then
+		table.insert(cuts, g.landLength)
+	end
+	local segments = {}
+	for i = 1, #cuts - 1 do
+		table.insert(segments, { cuts[i], cuts[i + 1] })
+	end
+	return segments
 end
 
 -- Studs up the ramp from the bottom for a ramp level (a fraction of this map's ramp).
