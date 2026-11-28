@@ -19,7 +19,8 @@ src/client  -> StarterPlayer.StarterPlayerScripts.Client
   Controllers/       Input, BikeController, TrickController, RagdollController, DamageDetector, GearController, CameraController, Session
   Feedback/          the only place gameplay events become sounds, particles and camera shake
   UI/                UiKit + Window + Card building blocks, Hud, PayoutSheet, Upgrades/Store/Settings windows, OfferPopup
-assets/models       Blender BMX (BMX.blend, BMX.fbx, preview) for when the mesh is imported
+assets/models       Blender BMX (BMX.blend, BMX.fbx, preview) for when the mesh is imported; cars/ = SuperLowPolyCars street cars
+tools/cars_glb.py   builds assets/models/cars/SuperLowPolyCars.glb from the pack (no Blender needed)
 tools/checksums.py  prints a checksum per script, used to check Studio matches the repo
 ```
 
