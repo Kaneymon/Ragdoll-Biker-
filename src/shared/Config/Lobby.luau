@@ -36,8 +36,9 @@ return {
 		{ angle = 55, id = "bones", titleKey = "BOARD_BONES", stat = "totalBones", format = "number" },
 	},
 
-	-- AFK corner: stand on the rug to earn money every `interval` seconds
-	afk = { angle = 150, distance = 82, radius = 22, interval = 60, reward = { base = 250, perLevel = 120 }, beanbags = 6 },
+	-- AFK corner: stay inside `radius` (the skatepark deck) to earn money every `interval` seconds;
+	-- openSide is the gap in the fences, in degrees round from +X in the AfkSkatepark model
+	afk = { angle = 150, distance = 82, radius = 22, interval = 60, reward = { base = 250, perLevel = 120 }, openSide = 84 },
 
 	-- the obby: a wooden ramp course running out from the east edge (+X), dropping as it goes.
 	-- Pieces in order: slope = sloped deck (length, angle), kicker = launch curve, gap = air
